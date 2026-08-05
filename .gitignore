@@ -1,0 +1,16 @@
+# Never commit these
+.env
+output/
+clients/
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+/tmp/
+
+# Reports are in Drive, not in the repo
+*.pdf
+
+# Keep placeholders
+!output/.gitkeep
+!clients/.gitkeep

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTH Due Diligence — {{company_name}}</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Segoe UI", Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: #1a1a1a;
+    background: #f8faf9;
+    line-height: 1.55;
+  }
+
+  /* ── Brand Palette ── */
+  :root {
+    --cth-primary:   #2D6A4F;
+    --cth-secondary: #40916C;
+    --cth-accent:    #52B788;
+    --cth-dark:      #1B4332;
+    --cth-light:     #D8F3DC;
+    --cth-bg:        #f8faf9;
+    --cth-white:     #ffffff;
+    --text-primary:  #1a1a1a;
+    --text-secondary:#4a5568;
+    --text-muted:    #718096;
+    --border:        #e2e8f0;
+    --verde:         #2D6A4F;
+    --ambar:         #D97706;
+    --rojo:          #DC2626;
+    --verde-bg:      #D8F3DC;
+    --ambar-bg:      #FEF3C7;
+    --rojo-bg:       #FEE2E2;
+  }
+
+  /* ── Page Container ── */
+  .page { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--cth-dark) 0%, var(--cth-primary) 60%, var(--cth-secondary) 100%);
+    color: var(--cth-white);
+    padding: 48px 0 40px;
+    margin-bottom: 32px;
+  }
+  header .page { display: flex; flex-direction: column; gap: 8px; }
+  .header-brand {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 24px; padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  .header-logo {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; letter-spacing: -0.5px;
+  }
+  .header-brand-text { font-size: 14px; font-weight: 600; letter-spacing: 1.8px; text-transform: uppercase; opacity: 0.85; }
+  .header-type { font-size: 12px; font-weight: 500; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.6; margin-bottom: 4px; }
+  .header-company { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.15; }
+  .header-tagline { font-size: 16px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+  .header-date { font-size: 13px; opacity: 0.55; margin-top: 12px; }
+
+  /* ── Score Card ── */
+  .score-card {
+    background: var(--cth-white); border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 6px 24px rgba(0,0,0,0.06);
+    padding: 40px; margin-bottom: 28px;
+    display: flex; align-items: center; gap: 44px;
+  }
+  .score-ring {
+    flex-shrink: 0; width: 140px; height: 140px;
+    border-radius: 50%; position: relative;
+    background: conic-gradient(var(--cth-primary) calc(var(--score-pct, 70) * 1%), var(--border) 0);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .score-ring-inner {
+    width: 112px; height: 112px; border-radius: 50%;
+    background: var(--cth-white); display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-value { font-size: 38px; font-weight: 800; color: var(--cth-primary); line-height: 1; }
+  .score-max { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .score-body { flex: 1; }
+  .score-badge {
+    display: inline-block; padding: 5px 16px; border-radius: 20px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    background: var(--cth-light); color: var(--cth-dark);
+    margin-bottom: 12px;
+  }
+  .score-verdict-title { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+  .score-verdict-body { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* ── Key Metrics Band ── */
+  .metrics-band {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
+    margin-bottom: 28px;
+  }
+  .metric-card {
+    background: var(--cth-white); border-radius: 12px; padding: 20px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    text-align: center; border-top: 3px solid var(--cth-accent);
+  }
+  .metric-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
+  .metric-value { font-size: 22px; font-weight: 800; color: var(--cth-dark); line-height: 1.2; }
+  .metric-sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* ── Eligibility Table ── */
+  .eligibility-table {
+    background: var(--cth-white); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 28px; overflow: hidden;
+  }
+  .eligibility-table h2 {
+    font-size: 16px; font-weight: 700; color: var(--cth-dark);
+    padding: 20px 28px 14px; border-bottom: 1px solid var(--border);
+  }
+  .elig-row {
+    display: grid; grid-template-columns: 180px 1fr 100px 2fr;
+    align-items: center; padding: 14px 28px; gap: 12px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .elig-row:last-child { border-bottom: none; }
+  .elig-criterion { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .elig-value { font-size: 13px; color: var(--text-secondary); }
+  .elig-result {
+    display: inline-block; padding: 3px 12px; border-radius: 12px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    text-align: center;
+  }
+  .elig-result.pass { background: var(--verde-bg); color: var(--verde); }
+  .elig-result.warn { background: var(--ambar-bg); color: var(--ambar); }
+  .elig-result.fail { background: var(--rojo-bg); color: var(--rojo); }
+  .elig-note { font-size: 12px; color: var(--text-muted); }
+
+  /* ── Section Titles ── */
+  .section-title {
+    font-size: 18px; font-weight: 700; color: var(--cth-dark);
+    margin: 36px 0 18px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--cth-light);
+  }
+
+  /* ── Scorecard Grid ── */
+  .scorecard-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-bottom: 32px;
+  }
+  .pillar-card {
+    background: var(--cth-white); border-radius: 12px; padding: 22px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--border);
+  }
+  .pillar-card.verde  { border-left-color: var(--verde); }
+  .pillar-card.ambar  { border-left-color: var(--ambar); }
+  .pillar-card.rojo   { border-left-color: var(--rojo); }
+  .pillar-card-name { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 8px; }
+  .pillar-card-score { font-size: 28px; font-weight: 800; line-height: 1; }
+  .pillar-card-score.verde { color: var(--verde); }
+  .pillar-card-score.ambar { color: var(--ambar); }
+  .pillar-card-score.rojo  { color: var(--rojo); }
+  .pillar-card-status { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .pillar-card-status.verde { color: var(--verde); }
+  .pillar-card-status.ambar { color: var(--ambar); }
+  .pillar-card-status.rojo  { color: var(--rojo); }
+  .pillar-card-summary { font-size: 12px; color: var(--text-secondary); margin-top: 10px; line-height: 1.5; }
+
+  /* ── Pillar Deep Dives (CSS-only collapsible) ── */
+  .pillar-block {
+    background: var(--cth-white); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 14px; overflow: hidden;
+  }
+  .pillar-toggle { display: none; }
+  .pillar-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px; cursor: pointer; user-select: none;
+    transition: background 0.15s;
+  }
+  .pillar-header:hover { background: #f7faf8; }
+  .pillar-header-left { display: flex; align-items: center; gap: 14px; }
+  .pillar-header-score {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: var(--cth-white);
+  }
+  .pillar-header-score.verde { background: var(--verde); }
+  .pillar-header-score.ambar { background: var(--ambar); }
+  .pillar-header-score.rojo  { background: var(--rojo); }
+  .pillar-header-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .pillar-chevron {
+    width: 20px; height: 20px; transition: transform 0.2s;
+    fill: var(--text-muted);
+  }
+  .pillar-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .pillar-toggle:checked ~ .pillar-body {
+    max-height: 2000px;
+  }
+  .pillar-toggle:checked ~ .pillar-header .pillar-chevron {
+    transform: rotate(180deg);
+  }
+  .pillar-content { padding: 0 24px 24px; }
+  .pillar-section { margin-bottom: 18px; }
+  .pillar-section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--cth-secondary); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pillar-section-title::before {
+    content: ''; display: inline-block; width: 3px; height: 14px;
+    border-radius: 2px; background: var(--cth-accent);
+  }
+  .pillar-section ul { list-style: none; padding: 0; }
+  .pillar-section li {
+    font-size: 13px; color: var(--text-secondary); padding: 5px 0 5px 18px;
+    position: relative; line-height: 1.5;
+  }
+  .pillar-section li::before {
+    content: ''; position: absolute; left: 0; top: 12px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--cth-accent);
+  }
+  .pillar-section.gaps li::before { background: var(--ambar); }
+  .pillar-section.missing li::before { background: var(--rojo); }
+  .pillar-section.actions li::before { background: var(--cth-primary); }
+
+  /* ── Document Tags ── */
+  .doc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dt {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600;
+  }
+  .dt.p { background: var(--verde-bg); color: var(--verde); }
+  .dt.w { background: var(--ambar-bg); color: var(--ambar); }
+  .dt.m { background: var(--rojo-bg); color: var(--rojo); }
+
+  /* ── Action Plan ── */
+  .cth-plan {
+    background: var(--cth-white); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 28px; overflow: hidden;
+  }
+  .cth-plan-phase {
+    padding: 24px 28px;
+  }
+  .cth-plan-phase + .cth-plan-phase { border-top: 1px solid var(--border); }
+  .cth-plan-phase h3 {
+    font-size: 15px; font-weight: 700; color: var(--cth-dark);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .phase-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .phase-badge.p1 { background: var(--cth-dark); color: var(--cth-white); }
+  .phase-badge.p2 { background: var(--cth-light); color: var(--cth-dark); }
+  .cth-plan ol { padding-left: 22px; }
+  .cth-plan li {
+    font-size: 13px; color: var(--text-secondary); padding: 5px 0;
+    line-height: 1.5;
+  }
+  .cth-plan li::marker { color: var(--cth-primary); font-weight: 700; }
+
+  /* ── Footer ── */
+  footer {
+    background: var(--cth-dark); color: rgba(255,255,255,0.7);
+    padding: 28px 0; margin-top: 48px; text-align: center;
+    font-size: 12px;
+  }
+  footer .footer-line { margin: 3px 0; }
+  footer .footer-conf { font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 10px; opacity: 0.6; margin-top: 8px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 800px) {
+    .metrics-band { grid-template-columns: repeat(3, 1fr); }
+    .scorecard-grid { grid-template-columns: repeat(2, 1fr); }
+    .score-card { flex-direction: column; text-align: center; gap: 24px; }
+    .elig-row { grid-template-columns: 1fr 1fr; gap: 6px; }
+  }
+  @media (max-width: 540px) {
+    .metrics-band { grid-template-columns: repeat(2, 1fr); }
+    .scorecard-grid { grid-template-columns: 1fr; }
+    .header-company { font-size: 26px; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    @page { size: A4; margin: 0.45in 0.5in; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: white; font-size: 13px; }
+    .page { max-width: 100%; padding: 0; }
+    .pillar-body { max-height: none !important; display: block !important; }
+    .pillar-chevron { display: none; }
+    .pillar-header { cursor: default; }
+    header, footer { -webkit-print-color-adjust: exact; }
+    .score-card, .pillar-block, .eligibility-table,
+    .cth-plan, .metrics-band { page-break-inside: avoid; }
+    h2, h3 { page-break-after: avoid; }
+    .pillar-block { box-shadow: none; border: 1px solid var(--border); }
+    .score-card, .metric-card, .eligibility-table, .cth-plan, .pillar-card {
+      box-shadow: none; border: 1px solid var(--border);
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ HEADER ═══════════════════════════════════════ -->
+<header>
+  <div class="page">
+    <div class="header-brand">
+      <div class="header-logo">CTH</div>
+      <span class="header-brand-text">CTH Growth Services</span>
+    </div>
+    <div class="header-type">Informe de Due Diligence</div>
+    <div class="header-company">{{company_name}}</div>
+    <div class="header-tagline">{{company_tagline}}</div>
+    <div class="header-date">{{scan_date}}</div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════ OVERALL SCORE ═══════════════════════════════════ -->
+<div class="page">
+  <div class="score-card">
+    <div class="score-ring" style="--score-pct: {{overall_score_pct}};">
+      <div class="score-ring-inner">
+        <span class="score-value">{{overall_score}}</span>
+        <span class="score-max">de 5.0</span>
+      </div>
+    </div>
+    <div class="score-body">
+      <span class="score-badge">{{cth_recommendation}}</span>
+      <div class="score-verdict-title">{{verdict_title}}</div>
+      <div class="score-verdict-body">{{verdict_body}}</div>
+    </div>
+  </div>
+
+<!-- ═══════════════════════════════════ KEY METRICS ═══════════════════════════════════ -->
+  <div class="metrics-band">
+    <div class="metric-card">
+      <div class="metric-label">{{metric_1_label}}</div>
+      <div class="metric-value">{{metric_1_value}}</div>
+      <div class="metric-sub">{{metric_1_sub}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{{metric_2_label}}</div>
+      <div class="metric-value">{{metric_2_value}}</div>
+      <div class="metric-sub">{{metric_2_sub}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{{metric_3_label}}</div>
+      <div class="metric-value">{{metric_3_value}}</div>
+      <div class="metric-sub">{{metric_3_sub}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{{metric_4_label}}</div>
+      <div class="metric-value">{{metric_4_value}}</div>
+      <div class="metric-sub">{{metric_4_sub}}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">{{metric_5_label}}</div>
+      <div class="metric-value">{{metric_5_value}}</div>
+      <div class="metric-sub">{{metric_5_sub}}</div>
+    </div>
+  </div>
+
+<!-- ═══════════════════════════════════ ELIGIBILITY ═══════════════════════════════════ -->
+  <div class="eligibility-table">
+    <h2>Criterios de Elegibilidad</h2>
+    <div class="elig-row">
+      <span class="elig-criterion">Etapa</span>
+      <span class="elig-value">{{elig_stage_value}}</span>
+      <span class="elig-result {{elig_stage_class}}">{{elig_stage_result}}</span>
+      <span class="elig-note">{{elig_stage_note}}</span>
+    </div>
+    <div class="elig-row">
+      <span class="elig-criterion">Ronda</span>
+      <span class="elig-value">{{elig_round_size_value}}</span>
+      <span class="elig-result {{elig_round_size_class}}">{{elig_round_size_result}}</span>
+      <span class="elig-note">{{elig_round_size_note}}</span>
+    </div>
+    <div class="elig-row">
+      <span class="elig-criterion">Alineaci&oacute;n Clim&aacute;tica</span>
+      <span class="elig-value">{{elig_climate_fit_value}}</span>
+      <span class="elig-result {{elig_climate_fit_class}}">{{elig_climate_fit_result}}</span>
+      <span class="elig-note">{{elig_climate_fit_note}}</span>
+    </div>
+    <div class="elig-row">
+      <span class="elig-criterion">Exclusividad</span>
+      <span class="elig-value">{{elig_exclusivity_value}}</span>
+      <span class="elig-result {{elig_exclusivity_class}}">{{elig_exclusivity_result}}</span>
+      <span class="elig-note">{{elig_exclusivity_note}}</span>
+    </div>
+    <div class="elig-row">
+      <span class="elig-criterion">Co-creaci&oacute;n</span>
+      <span class="elig-value">{{elig_co_creation_value}}</span>
+      <span class="elig-result {{elig_co_creation_class}}">{{elig_co_creation_result}}</span>
+      <span class="elig-note">{{elig_co_creation_note}}</span>
+    </div>
+  </div>
+
+<!-- ═══════════════════════════════════ SCORECARD GRID ═══════════════════════════════════ -->
+  <h2 class="section-title">Scorecard por Pilar</h2>
+  <div class="scorecard-grid">
+    <div class="pillar-card {{bm_color}}">
+      <div class="pillar-card-name">Modelo de Negocio</div>
+      <div class="pillar-card-score {{bm_color}}">{{bm_score}}</div>
+      <div class="pillar-card-status {{bm_color}}">{{bm_status}}</div>
+      <div class="pillar-card-summary">{{bm_summary}}</div>
+    </div>
+    <div class="pillar-card {{team_color}}">
+      <div class="pillar-card-name">Equipo</div>
+      <div class="pillar-card-score {{team_color}}">{{team_score}}</div>
+      <div class="pillar-card-status {{team_color}}">{{team_status}}</div>
+      <div class="pillar-card-summary">{{team_summary}}</div>
+    </div>
+    <div class="pillar-card {{traction_color}}">
+      <div class="pillar-card-name">Tracci&oacute;n</div>
+      <div class="pillar-card-score {{traction_color}}">{{traction_score}}</div>
+      <div class="pillar-card-status {{traction_color}}">{{traction_status}}</div>
+      <div class="pillar-card-summary">{{traction_summary}}</div>
+    </div>
+    <div class="pillar-card {{financials_color}}">
+      <div class="pillar-card-name">Finanzas</div>
+      <div class="pillar-card-score {{financials_color}}">{{financials_score}}</div>
+      <div class="pillar-card-status {{financials_color}}">{{financials_status}}</div>
+      <div class="pillar-card-summary">{{financials_summary}}</div>
+    </div>
+    <div class="pillar-card {{impact_color}}">
+      <div class="pillar-card-name">Impacto</div>
+      <div class="pillar-card-score {{impact_color}}">{{impact_score}}</div>
+      <div class="pillar-card-status {{impact_color}}">{{impact_status}}</div>
+      <div class="pillar-card-summary">{{impact_summary}}</div>
+    </div>
+    <div class="pillar-card {{legal_color}}">
+      <div class="pillar-card-name">Legal &amp; IP</div>
+      <div class="pillar-card-score {{legal_color}}">{{legal_score}}</div>
+      <div class="pillar-card-status {{legal_color}}">{{legal_status}}</div>
+      <div class="pillar-card-summary">{{legal_summary}}</div>
+    </div>
+    <div class="pillar-card {{market_color}}">
+      <div class="pillar-card-name">Mercado</div>
+      <div class="pillar-card-score {{market_color}}">{{market_score}}</div>
+      <div class="pillar-card-status {{market_color}}">{{market_status}}</div>
+      <div class="pillar-card-summary">{{market_summary}}</div>
+    </div>
+    <div class="pillar-card {{investor_readiness_color}}">
+      <div class="pillar-card-name">Preparaci&oacute;n para Inversi&oacute;n</div>
+      <div class="pillar-card-score {{investor_readiness_color}}">{{investor_readiness_score}}</div>
+      <div class="pillar-card-status {{investor_readiness_color}}">{{investor_readiness_status}}</div>
+      <div class="pillar-card-summary">{{investor_readiness_summary}}</div>
+    </div>
+  </div>
+
+<!-- ═══════════════════════════════════ PILLAR DEEP DIVES ═══════════════════════════════ -->
+  <h2 class="section-title">An&aacute;lisis Detallado por Pilar</h2>
+
+  <!-- Modelo de Negocio -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-bm">
+    <label class="pillar-header" for="toggle-bm">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{bm_color}}">{{bm_score}}</div>
+        <span class="pillar-header-name">Modelo de Negocio</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{bm_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{bm_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{bm_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{bm_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{bm_docs_present}}{{bm_docs_weak}}{{bm_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equipo -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-team">
+    <label class="pillar-header" for="toggle-team">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{team_color}}">{{team_score}}</div>
+        <span class="pillar-header-name">Equipo</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{team_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{team_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{team_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{team_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{team_docs_present}}{{team_docs_weak}}{{team_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracción -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-traction">
+    <label class="pillar-header" for="toggle-traction">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{traction_color}}">{{traction_score}}</div>
+        <span class="pillar-header-name">Tracci&oacute;n</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{traction_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{traction_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{traction_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{traction_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{traction_docs_present}}{{traction_docs_weak}}{{traction_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finanzas -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-financials">
+    <label class="pillar-header" for="toggle-financials">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{financials_color}}">{{financials_score}}</div>
+        <span class="pillar-header-name">Finanzas</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{financials_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{financials_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{financials_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{financials_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{financials_docs_present}}{{financials_docs_weak}}{{financials_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Impacto -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-impact">
+    <label class="pillar-header" for="toggle-impact">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{impact_color}}">{{impact_score}}</div>
+        <span class="pillar-header-name">Impacto</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{impact_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{impact_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{impact_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{impact_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{impact_docs_present}}{{impact_docs_weak}}{{impact_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legal & IP -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-legal">
+    <label class="pillar-header" for="toggle-legal">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{legal_color}}">{{legal_score}}</div>
+        <span class="pillar-header-name">Legal &amp; IP</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{legal_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{legal_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{legal_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{legal_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{legal_docs_present}}{{legal_docs_weak}}{{legal_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mercado -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-market">
+    <label class="pillar-header" for="toggle-market">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{market_color}}">{{market_score}}</div>
+        <span class="pillar-header-name">Mercado</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{market_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{market_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{market_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{market_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{market_docs_present}}{{market_docs_weak}}{{market_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preparación para Inversión -->
+  <div class="pillar-block">
+    <input type="checkbox" class="pillar-toggle" id="toggle-investor_readiness">
+    <label class="pillar-header" for="toggle-investor_readiness">
+      <div class="pillar-header-left">
+        <div class="pillar-header-score {{investor_readiness_color}}">{{investor_readiness_score}}</div>
+        <span class="pillar-header-name">Preparaci&oacute;n para Inversi&oacute;n</span>
+      </div>
+      <svg class="pillar-chevron" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </label>
+    <div class="pillar-body">
+      <div class="pillar-content">
+        <div class="pillar-section strengths">
+          <div class="pillar-section-title">Fortalezas</div>
+          <ul>{{investor_readiness_strengths}}</ul>
+        </div>
+        <div class="pillar-section gaps">
+          <div class="pillar-section-title">Brechas</div>
+          <ul>{{investor_readiness_gaps}}</ul>
+        </div>
+        <div class="pillar-section missing">
+          <div class="pillar-section-title">Documentos Faltantes</div>
+          <ul>{{investor_readiness_missing}}</ul>
+        </div>
+        <div class="pillar-section actions">
+          <div class="pillar-section-title">Acciones Fase 1 CTH</div>
+          <ul>{{investor_readiness_actions}}</ul>
+        </div>
+        <div class="pillar-section">
+          <div class="pillar-section-title">Estado de Documentos</div>
+          <div class="doc-tags">{{investor_readiness_docs_present}}{{investor_readiness_docs_weak}}{{investor_readiness_docs_missing}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ═══════════════════════════════════ ACTION PLAN ═══════════════════════════════════ -->
+  <h2 class="section-title">Plan de Acci&oacute;n</h2>
+  <div class="cth-plan">
+    <div class="cth-plan-phase">
+      <h3><span class="phase-badge p1">Fase 1</span> Acciones Prioritarias</h3>
+      <ol>{{action_plan_p1}}</ol>
+    </div>
+    <div class="cth-plan-phase">
+      <h3><span class="phase-badge p2">Fase 2</span> Pipeline de Desarrollo</h3>
+      <ol>{{action_plan_p2}}</ol>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<!-- ═══════════════════════════════════ FOOTER ═══════════════════════════════════ -->
+<footer>
+  <div class="footer-line">CTH Growth Services &middot; Informe de Due Diligence</div>
+  <div class="footer-line">{{scan_date}}</div>
+  <div class="footer-conf">Confidencial &mdash; uso interno CTH</div>
+</footer>
+
+</body>
+</html>
