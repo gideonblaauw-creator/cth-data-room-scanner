@@ -99,10 +99,7 @@ Output the full JSON structure matching `SCORING_OUTPUT_SCHEMA` in `scanner/scor
 Run the renderer:
 
 ```python
-import sys
-sys.path.insert(0, '/opt/cth-data-room-scanner')
-from scanner.render import render_report, save_html
-from scanner.render import slugify
+from scanner.render import render_report, save_html, slugify
 
 slug = slugify(company_name)
 scan_date = "YYYY-MM-DD"  # today

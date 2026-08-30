@@ -1,8 +1,6 @@
 """
 scanner/pdf.py
 HTML → PDF using Playwright (headless Chromium).
-
-Adapted from Sustenttia agent6_pdf_convert.py.
 Primary: Playwright Chromium. Fallback: WeasyPrint.
 """
 

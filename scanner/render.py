@@ -8,13 +8,15 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
+from scanner.config import SELLER_LEGAL_NAME, TEMPLATES_DIR
+
 
 def render_report(scoring: dict, lang: str = "es") -> str:
     """
     Inject scoring JSON into templates/report.html.
     Returns the final HTML string.
     """
-    template_path = Path(__file__).parent.parent / "templates" / "report.html"
+    template_path = TEMPLATES_DIR / "report.html"
     template = template_path.read_text(encoding="utf-8")
 
     company = scoring["company"]
@@ -36,6 +38,7 @@ def render_report(scoring: dict, lang: str = "es") -> str:
         "{{verdict_title}}":      overall["verdict_title"],
         "{{verdict_body}}":       overall["verdict_body"],
         "{{overall_score_pct}}":  str(int(overall["score"] / 5.0 * 100)),
+        "{{seller_legal_name}}":  SELLER_LEGAL_NAME,
     }
 
     # ── Key metrics (5 cards) ─────────────────────────────────────────────────

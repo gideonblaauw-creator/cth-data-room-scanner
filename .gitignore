@@ -1,12 +1,16 @@
 # Never commit these
 .env
+.env.*
+!.env.example
 output/
 clients/
+secrets/
 __pycache__/
 *.pyc
 .DS_Store
 node_modules/
 /tmp/
+.pytest_cache/
 
 # Reports are in Drive, not in the repo
 *.pdf
