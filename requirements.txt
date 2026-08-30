@@ -1,2 +1,21 @@
+# Core
 playwright>=1.40.0
-weasyprint>=60.0     # fallback only
+weasyprint>=60.0          # PDF fallback only
+
+# Google Drive API
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+
+# LLM scoring
+anthropic>=0.40.0
+
+# PDF text extraction
+pypdf>=4.0.0
+
+# Web app + queue
+flask>=3.0.0
+redis>=5.0.0
+rq>=1.16.0
+
+# Testing
+pytest>=8.0.0

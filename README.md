@@ -6,68 +6,149 @@ Scans a startup's Google Drive data room and produces a branded due diligence re
 ## Who uses this
 
 CTH team — Gideon, Jop, Brian (Kwakman).
-Requires: Claude Code (CTH Desktop 1) + Google Drive MCP connected in Claude Desktop.
 
-## Before your first scan
+Two modes:
+- **Claude Code** — `/scan` slash command (in-session MCP, legacy workflow)
+- **Web app** — form at `http://127.0.0.1:8080` with Redis-backed job queue (Lane A)
 
-1. Clone this repo and run `pip install playwright --break-system-packages && playwright install chromium`
-2. Copy `.env.example` → `.env` and add your `DRIVE_REPORTS_FOLDER_ID` (ask Gideon)
-3. Confirm Google Drive is connected in Claude Desktop → Settings → Connectors
+## Quick start (compose)
 
-## How to run a scan
+```bash
+# 1. Clone and configure
+git clone https://github.com/gideonblaauw-creator/cth-data-room-scanner.git
+cd cth-data-room-scanner
+cp .env.example .env
+# Edit .env — set ANTHROPIC_API_KEY and mount Google service account JSON
 
-Open Claude Code and type:
+# 2. Place service account key (never commit)
+mkdir -p secrets
+cp /path/to/google-sa.json secrets/google-sa.json
+
+# 3. Start stack
+docker compose up --build
+
+# 4. Open form
+open http://127.0.0.1:8080
+```
+
+Services:
+| Service | Role |
+|---------|------|
+| `web` | Flask form on 127.0.0.1:8080 |
+| `worker` | RQ worker — crawl, score, render, PDF, upload |
+| `redis` | Job queue |
+
+Caddy terminates TLS in production — the app binds to localhost only.
+
+## Dry-run (no API keys)
+
+```bash
+pip install -r requirements.txt
+playwright install chromium
+python scripts/dry_run.py --company "TestCo"
+```
+
+Uses BeCaps 3.5 calibration fixture. Generates local HTML (+ PDF if Playwright installed).
+No Drive crawl, no LLM call, no upload.
+
+## Tests
+
+```bash
+pip install -r requirements.txt
+pytest tests/ -v
+```
+
+## How a scan works
+
+1. **Parse** — Drive folder URL/ID, company name, language
+2. **Crawl** — recursive Drive folder (max 20 files × 4000 chars)
+3. **Score** — LLM scores 8 pillars using `skills/cth-growth-services.md`
+4. **Render** — inject JSON into `templates/report.html`
+5. **PDF** — Playwright headless Chromium (WeasyPrint fallback)
+6. **Upload** — HTML + PDF to shared Drive reports folder
+7. **Summary** — job status in web UI
+
+## Outputs
+
+Local working copies (gitignored):
+- `output/{slug}-{YYYY-MM}.html`
+- `output/{slug}-{YYYY-MM}.pdf`
+
+Shared Drive (team access):
+- `CTH Growth Services / Reports / {YYYY-MM} / {slug} /`
+  - `{slug}-{YYYY-MM}.html`
+  - `{slug}-{YYYY-MM}.pdf`
+
+Drive folder: `1RvuoSvbm6SvbdCWU06Wa7jyfEniPmzbP`
+
+Reports are **never** published to public URLs. Private data rooms stay in Drive only.
+
+## Configuration
+
+All paths are env-driven — no hardcoded `/opt/cth-data-room-scanner`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OUTPUT_DIR` | `./output` | Local report output |
+| `DRIVE_REPORTS_FOLDER_ID` | `1RvuoSvbm6SvbdCWU06Wa7jyfEniPmzbP` | Upload destination |
+| `GOOGLE_APPLICATION_CREDENTIALS` | — | Service account JSON path |
+| `ANTHROPIC_API_KEY` | — | LLM scoring |
+| `REDIS_URL` | `redis://redis:6379/0` | Job queue |
+| `SELLER_LEGAL_NAME` | `CLEANTECHHUB INTERNATIONAL S.L.` | Report footer |
+
+### Secrets (SOPS+age)
+
+For VPS deployment, encrypt `.env` with SOPS+age. Age key lives on the VPS only — never in git.
+
+## Calibration reference
+
+BeCaps (April 2026): 3.5/5 — GO Phase 1. Use as scoring benchmark.
+
+| Field | Value |
+|-------|-------|
+| Drive folder | `1sg4TlFoP2_YVYmDdxuacC3Gs4kpB0Bd_` |
+| Access | **READ-ONLY** — never write to this folder |
+
+## Claude Code workflow (legacy)
 
 ```
 /scan https://drive.google.com/drive/folders/FOLDER_ID
 ```
 
-Claude will ask for:
-- Company name (if not in the URL)
-- Language (default: Spanish)
-- Any context not visible in the Drive (round size, stage, founder notes)
+See `.claude/commands/scan.md` for the in-session flow.
 
-Then it crawls, scores, renders, and uploads automatically.
+## Architecture
 
-## Outputs
-
-Local copies (gitignored):
-- `output/{slug}-{YYYY-MM}.html` — open in browser to review
-- `output/{slug}-{YYYY-MM}.pdf`  — ready to send
-
-In shared Drive (everyone sees immediately):
-- `CTH Growth Services / Reports / {YYYY-MM} / {slug} /`
-  - `{slug}-{YYYY-MM}.html`
-  - `{slug}-{YYYY-MM}.pdf`
-
-## After the scan
-
-1. Open the HTML report in your browser — review scores, check findings
-2. If edits needed: edit `output/{slug}.html` directly, then re-upload:
-   - In Claude Code: "re-upload output/{slug}.html and output/{slug}.pdf to Drive"
-3. Download the PDF from Drive and attach to the founder email (send manually)
-4. Schedule the 30-min follow-up call
-
-Optional — public URL (Gideon only):
 ```
-scp output/{slug}-{YYYY-MM}.html root@51.195.45.77:/var/www/reportes/
+┌──────────┐     ┌───────┐     ┌────────┐
+│  Web UI  │────▶│ Redis │────▶│ Worker │
+│ :8080    │     │  RQ   │     │        │
+└──────────┘     └───────┘     └───┬────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+              Drive API      Anthropic API   Playwright
+              (crawl/upload)  (scoring)      (PDF)
 ```
-→ `https://reportes.cleantechhub.net/{slug}-{YYYY-MM}.html`
-
-## Calibration reference
-
-BeCaps (April 2026): 3.5/5 — GO Phase 1. Use as scoring benchmark.
-Drive folder ID: `1sg4TlFoP2_YVYmDdxuacC3Gs4kpB0Bd_`
-
-## Adding a new team member
-
-1. Add them to the GitHub repo (write access)
-2. Share the "CTH Growth Services / Reports" Drive folder with them (Editor)
-3. They clone, install deps, copy .env.example → .env, add folder ID
-4. No VPS access needed — ever
 
 ## Current team
 
 - Gideon Blaauw — gideon.blaauw@cleantechhub.net
 - Jop Blom — jop.blom@cleantechhub.net
 - Brian Kwakman — brian.kwakman@behold.nl
+
+## Status
+
+| Component | Status |
+|-----------|--------|
+| `templates/report.html` + `scanner/render.py` | ✅ Runnable |
+| `scanner/pdf.py` | ✅ Runnable |
+| `scanner/crawl.py` | ✅ Drive API implementation |
+| `scanner/upload.py` | ✅ Drive API implementation |
+| `scanner/score_runner.py` + `scanner/runner.py` | ✅ Headless steps 1–7 |
+| `app/main.py` + RQ worker | ✅ HTTP form + queue |
+| `compose.yml` | ✅ Redis + web + worker + Playwright |
+| `scripts/dry_run.py` + `tests/` | ✅ Dry-run + pytest |
+| Caddy TLS edge | [PENDIENTE] |
+| CI pipeline | [PENDIENTE] |
+| VPS deploy (Hands) | [PENDIENTE] |

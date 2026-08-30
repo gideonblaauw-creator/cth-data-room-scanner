@@ -1,0 +1,54 @@
+# CTH Data Room Scanner — Compose stack for CTH Compose pod
+# Usage: docker compose up --build
+# Web UI: http://127.0.0.1:8080 (Caddy terminates TLS in production)
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8080
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - ./output:/app/output
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./secrets/google-sa.json}:/secrets/google-sa.json:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python -m app.main
+
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - ./output:/app/output
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./secrets/google-sa.json}:/secrets/google-sa.json:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python -m app.worker
+
+volumes:
+  redis_data:
