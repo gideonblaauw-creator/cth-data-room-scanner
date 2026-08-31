@@ -29,7 +29,7 @@ docker compose up --build
 
 # 4. Open React shell (dev)
 cd web && npm install && npm run dev
-# → http://localhost:5173  (proxies /api to Flask :8080)
+# → http://localhost:5173/dataroom-scanner/  (proxies /api to Flask :8080)
 
 # Or open legacy Flask form directly:
 open http://127.0.0.1:8080
@@ -136,7 +136,7 @@ See `.claude/commands/scan.md` for the in-session flow.
                                     (crawl/upload)  (scoring)      (PDF)
 ```
 
-DNS público para el shell React: **[PENDIENTE]** — no publicar en `reportes.cleantechhub.net`.
+DNS público para el shell React: **https://apps.cleantechhub.net/dataroom-scanner** (no usar `reportes.cleantechhub.net`).
 
 ## Current team
 
