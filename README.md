@@ -9,7 +9,7 @@ CTH team — Gideon, Jop, Brian (Kwakman).
 
 Two modes:
 - **Claude Code** — `/scan` slash command (in-session MCP, legacy workflow)
-- **Web app** — form at `http://127.0.0.1:8080` with Redis-backed job queue (Lane A)
+- **Web app** — React shell in `web/` + Flask API on `http://127.0.0.1:8080` with Redis-backed job queue (Lane A)
 
 ## Quick start (compose)
 
@@ -27,14 +27,19 @@ cp /path/to/google-sa.json secrets/google-sa.json
 # 3. Start stack
 docker compose up --build
 
-# 4. Open form
+# 4. Open React shell (dev)
+cd web && npm install && npm run dev
+# → http://localhost:5173  (proxies /api to Flask :8080)
+
+# Or open legacy Flask form directly:
 open http://127.0.0.1:8080
 ```
 
 Services:
 | Service | Role |
 |---------|------|
-| `web` | Flask form on 127.0.0.1:8080 |
+| `web` (compose) | Flask API on 127.0.0.1:8080 |
+| `web/` (React) | Public CTH-branded shell — see `web/README.md` |
 | `worker` | RQ worker — crawl, score, render, PDF, upload |
 | `redis` | Job queue |
 
@@ -120,16 +125,18 @@ See `.claude/commands/scan.md` for the in-session flow.
 ## Architecture
 
 ```
-┌──────────┐     ┌───────┐     ┌────────┐
-│  Web UI  │────▶│ Redis │────▶│ Worker │
-│ :8080    │     │  RQ   │     │        │
-└──────────┘     └───────┘     └───┬────┘
-                                   │
-                    ┌──────────────┼──────────────┐
-                    ▼              ▼              ▼
-              Drive API      Anthropic API   Playwright
-              (crawl/upload)  (scoring)      (PDF)
+┌──────────────┐     ┌──────────┐     ┌───────┐     ┌────────┐
+│ React shell  │────▶│ Flask API│────▶│ Redis │────▶│ Worker │
+│ web/ :5173   │     │ :8080    │     │  RQ   │     │        │
+└──────────────┘     └──────────┘     └───────┘     └───┬────┘
+                                                         │
+                                          ┌──────────────┼──────────────┐
+                                          ▼              ▼              ▼
+                                    Drive API      Anthropic API   Playwright
+                                    (crawl/upload)  (scoring)      (PDF)
 ```
+
+DNS público para el shell React: **[PENDIENTE]** — no publicar en `reportes.cleantechhub.net`.
 
 ## Current team
 
@@ -146,7 +153,8 @@ See `.claude/commands/scan.md` for the in-session flow.
 | `scanner/crawl.py` | ✅ Drive API implementation |
 | `scanner/upload.py` | ✅ Drive API implementation |
 | `scanner/score_runner.py` + `scanner/runner.py` | ✅ Headless steps 1–7 |
-| `app/main.py` + RQ worker | ✅ HTTP form + queue |
+| `app/main.py` + RQ worker | ✅ Flask API + queue + legacy form |
+| `web/` React shell | ✅ CTH-branded Lane A UI |
 | `compose.yml` | ✅ Redis + web + worker + Playwright |
 | `scripts/dry_run.py` + `tests/` | ✅ Dry-run + pytest |
 | Caddy TLS edge | [PENDIENTE] |

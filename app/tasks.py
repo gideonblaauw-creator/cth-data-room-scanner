@@ -36,5 +36,7 @@ def run_scan_job(
         "html_path": result.html_path,
         "pdf_path": result.pdf_path,
         "drive_folder_url": result.drive_folder_url,
+        "html_url": result.html_url,
+        "pdf_url": result.pdf_url,
         "errors": result.errors,
     }
