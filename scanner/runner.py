@@ -50,6 +50,8 @@ class ScanResult:
     html_path: str
     pdf_path: str | None
     drive_folder_url: str | None = None
+    html_url: str | None = None
+    pdf_url: str | None = None
     errors: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
@@ -124,6 +126,8 @@ def run_scan(req: ScanRequest) -> ScanResult:
 
     # Step 6 — Upload to Drive
     drive_url = None
+    html_url = None
+    pdf_url = None
     if not req.skip_upload and not req.dry_run:
         try:
             logger.info("runner: uploading to Drive folder %s", DRIVE_REPORTS_FOLDER_ID)
@@ -131,6 +135,8 @@ def run_scan(req: ScanRequest) -> ScanResult:
                 html_path, pdf_path, slug, scan_date
             )
             drive_url = upload_result["folder_url"]
+            html_url = upload_result.get("html_url")
+            pdf_url = upload_result.get("pdf_url")
         except Exception as exc:
             errors.append(f"Drive upload failed: {exc}")
             logger.exception("runner: upload failed")
@@ -147,5 +153,7 @@ def run_scan(req: ScanRequest) -> ScanResult:
         html_path=html_path,
         pdf_path=pdf_path,
         drive_folder_url=drive_url,
+        html_url=html_url,
+        pdf_url=pdf_url,
         errors=errors,
     )
