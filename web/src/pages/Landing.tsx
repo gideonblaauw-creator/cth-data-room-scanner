@@ -30,7 +30,16 @@ export function Landing() {
           pod CTH. El navegador nunca accede directamente a Google Drive.
         </p>
         <p className="muted" style={{ marginTop: '0.75rem' }}>
-          DNS público: <strong>[PENDIENTE]</strong> — sin publicar en reportes.cleantechhub.net.
+          URL pública:{' '}
+          <strong>
+            <a
+              href="https://apps.cleantechhub.net/dataroom-scanner"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              apps.cleantechhub.net/dataroom-scanner
+            </a>
+          </strong>
         </p>
       </section>
     </>

@@ -4,9 +4,11 @@ import { JobStatus } from './pages/JobStatus'
 import { Landing } from './pages/Landing'
 import { ScanForm } from './pages/ScanForm'
 
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename || undefined}>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Landing />} />
