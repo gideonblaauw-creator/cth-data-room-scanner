@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 output/
+out/
 clients/
 secrets/
 __pycache__/

@@ -1,0 +1,25 @@
+VERTIGREEN ROBOTICS B.V.
+Invoice #VG-2026-0142
+Date: 2026-01-15
+
+Bill To:
+Greenhouse Partners Gelderland B.V.
+[ADDRESS REDACTED]
+KvK: 12****89
+
+Description                          Qty    Unit     Total
+Irrigation Node v2.1                  40   €420.00  €16,800.00
+Installation (pilot tier)              1   €2,400.00 €2,400.00
+                                    ─────────────────────────
+Subtotal                                      €19,200.00
+VAT 21%                                        €4,032.00
+TOTAL DUE                                     €23,232.00
+
+Payment terms: Net 30
+Bank: [BANK NAME REDACTED]
+IBAN: NL** **** **** **** 42
+BIC: [REDACTED]
+
+Notes:
+- Partial account number visible — human should confirm redaction before external share.
+- Matches financials-summary MRR narrative for Jan 2026.

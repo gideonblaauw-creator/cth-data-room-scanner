@@ -40,6 +40,39 @@ Services:
 
 Caddy terminates TLS in production — the app binds to localhost only.
 
+## HITL demo (synthetic fixtures, no API keys)
+
+First human-in-the-loop workflow for Dataroom Reviewer — **synthetic VertiGreen fixture only**, no real client datarooms or secrets.
+
+```bash
+make hitl-demo
+```
+
+Outputs (gitignored under `out/`):
+
+| Path | Purpose |
+|------|---------|
+| `out/findings.json` | Structured scan findings |
+| `out/notion/explainer.md` | ExplainDiff-style explainer + 5-question quiz |
+| `out/notion/decisions.csv` | Notion Decisions DB import template |
+| `out/notion/decisions.json` | Same schema as JSON |
+
+**Microworld:** open `hitl/microworld/index.html` locally (see `hitl/microworld/README.md`) to scrub through agent reasoning steps.
+
+**Notion spec:** `hitl/NOTION-HITL.md` documents the Decisions database properties and multiplayer workflow.
+
+### Geoffrey Litt — Explanations / Micro worlds / Shared spaces
+
+This HITL loop implements ideas from [Geoffrey Litt's talk on explorable explanations](https://www.youtube.com/watch?v=WkBPX-oDMnA):
+
+| Pillar | In this repo | Artifact |
+|--------|--------------|----------|
+| **Explanations** | Literate walkthrough + quiz gate | `out/notion/explainer.md` |
+| **Micro worlds** | Local scrubber playground | `hitl/microworld/index.html` |
+| **Shared spaces** | Multiplayer Notion Decisions DB | `hitl/NOTION-HITL.md`, `out/notion/decisions.csv` |
+
+**Gate:** A run is Approved only if the reviewer passes the quiz or records an explicit waiver in Notion.
+
 ## Dry-run (no API keys)
 
 ```bash
