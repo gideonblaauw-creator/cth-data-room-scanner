@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HITL Finding Scrubber — VertiGreen Microworld</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4f;
+      --text: #e6edf3;
+      --muted: #8b9cb3;
+      --accent: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --unclear: #a371f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "SF Mono", "Fira Code", ui-monospace, monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header h1 { margin: 0 0 0.25rem; font-size: 1.1rem; font-weight: 600; }
+    header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+    main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 80px); }
+    aside {
+      border-right: 1px solid var(--border);
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .panel {
+      padding: 1.25rem 1.5rem;
+      overflow-y: auto;
+    }
+    .finding-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.35rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .finding-item:hover, .finding-item.active {
+      border-color: var(--accent);
+      background: rgba(63, 185, 80, 0.08);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      margin-left: 0.35rem;
+      text-transform: uppercase;
+    }
+    .badge.auto_ok { background: rgba(63,185,80,0.2); color: var(--accent); }
+    .badge.needs_human { background: rgba(248,81,73,0.2); color: var(--danger); }
+    .badge.unclear { background: rgba(163,113,247,0.2); color: var(--unclear); }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .meta-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+    .meta-card label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.2rem; }
+    .meta-card span { font-size: 0.9rem; word-break: break-all; }
+    .scrubber {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+    }
+    .step-display {
+      min-height: 4rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: 6px;
+      margin: 0.75rem 0;
+      font-size: 0.9rem;
+    }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    button, .file-btn {
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    button:hover, .file-btn:hover { border-color: var(--accent); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .progress { color: var(--muted); font-size: 0.8rem; }
+    input[type="file"] { display: none; }
+    .toolbar { margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    footer {
+      grid-column: 1 / -1;
+      padding: 0.75rem 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Finding Scrubber — HITL Microworld</h1>
+    <p>Synthetic VertiGreen fixture · Learning artifact · Not production UI</p>
+  </header>
+  <main>
+    <aside>
+      <div class="toolbar">
+        <label class="file-btn">
+          Load findings.json
+          <input type="file" id="fileInput" accept=".json" />
+        </label>
+      </div>
+      <div id="findingList"></div>
+    </aside>
+    <section class="panel">
+      <div id="detail">
+        <p style="color: var(--muted)">Select a finding or load <code>out/findings.json</code> from <code>make hitl-demo</code>.</p>
+      </div>
+    </section>
+    <footer>
+      Geoffrey Litt — <em>Micro worlds</em>: scrub through agent reasoning before deciding in the Notion shared space.
+      See <code>hitl/NOTION-HITL.md</code> and <code>hitl/microworld/README.md</code>.
+    </footer>
+  </main>
+  <script>
+    const SAMPLE = {
+      run_id: "hitl-sample",
+      company: "VertiGreen Robotics",
+      findings: [
+        {
+          finding_id: "F004",
+          fixture_path: "financials-summary.md",
+          pillar: "financials",
+          label: "needs_human",
+          agent_suggestion: "verify_financials",
+          rule_fired: "R006",
+          excerpt: "Financial Summary (Draft — Q1 2026) Synthetic fixture. Not audited.",
+          reasoning_steps: [
+            { step: 1, rule_id: "R006", description: "Unaudited or projected financial figures", matched_text: "not audited" },
+            { step: 2, rule_id: "R003", description: "Document self-flags for human review", matched_text: "Human review required" }
+          ]
+        },
+        {
+          finding_id: "F005",
+          fixture_path: "fake-invoice-redacted.txt",
+          pillar: "financials",
+          label: "needs_human",
+          agent_suggestion: "confirm_redaction",
+          rule_fired: "R002",
+          excerpt: "IBAN: NL** **** **** **** 42",
+          reasoning_steps: [
+            { step: 1, rule_id: "R002", description: "Partial bank account number visible", matched_text: "IBAN: NL**" }
+          ]
+        },
+        {
+          finding_id: "F006",
+          fixture_path: "cap-table-outline.md",
+          pillar: "legal",
+          label: "unclear",
+          agent_suggestion: "verify_cap_table",
+          rule_fired: "R005",
+          excerpt: "SAFE note mentioned in email thread — not reflected above",
+          reasoning_steps: [
+            { step: 1, rule_id: "R005", description: "Cap table or dilution signals need verification", matched_text: "SAFE" },
+            { step: 2, rule_id: "R004", description: "Ambiguous legal or binding language", matched_text: "Ambiguities" }
+          ]
+        }
+      ]
+    };
+
+    let data = SAMPLE;
+    let selectedId = null;
+    let stepIndex = 0;
+
+    const findingList = document.getElementById("findingList");
+    const detail = document.getElementById("detail");
+    const fileInput = document.getElementById("fileInput");
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const json = JSON.parse(await file.text());
+        if (!json.findings) throw new Error("Missing findings array");
+        data = json;
+        selectedId = null;
+        renderList();
+        detail.innerHTML = `<p style="color: var(--accent)">Loaded ${file.name} — ${json.findings.length} findings.</p>`;
+      } catch (err) {
+        alert("Invalid findings.json: " + err.message);
+      }
+    });
+
+    function renderList() {
+      findingList.innerHTML = data.findings.map((f) => `
+        <button class="finding-item ${f.finding_id === selectedId ? "active" : ""}" data-id="${f.finding_id}">
+          ${f.finding_id}<span class="badge ${f.label}">${f.label}</span>
+          <div style="color: var(--muted); margin-top: 0.2rem; font-size: 0.72rem;">${f.fixture_path}</div>
+        </button>
+      `).join("");
+      findingList.querySelectorAll(".finding-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedId = btn.dataset.id;
+          stepIndex = 0;
+          renderList();
+          renderDetail();
+        });
+      });
+    }
+
+    function renderDetail() {
+      const f = data.findings.find((x) => x.finding_id === selectedId);
+      if (!f) return;
+      const steps = f.reasoning_steps || [];
+      const step = steps[stepIndex] || { description: "No steps." };
+
+      detail.innerHTML = `
+        <h2 style="margin: 0 0 1rem; font-size: 1rem;">${f.finding_id} — ${f.fixture_path}</h2>
+        <div class="meta-grid">
+          <div class="meta-card"><label>File</label><span>${f.fixture_path}</span></div>
+          <div class="meta-card"><label>Pillar</label><span>${f.pillar || "—"}</span></div>
+          <div class="meta-card"><label>Rule fired</label><span>${f.rule_fired}</span></div>
+          <div class="meta-card"><label>Label</label><span class="badge ${f.label}">${f.label}</span></div>
+          <div class="meta-card"><label>Suggested action</label><span>${f.agent_suggestion}</span></div>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--muted);">${f.excerpt || ""}</p>
+        <div class="scrubber">
+          <strong>Reasoning scrubber</strong>
+          <div class="step-display">
+            <div><strong>${step.rule_id || "—"}</strong> — ${step.description}</div>
+            ${step.matched_text ? `<div style="margin-top: 0.5rem; color: var(--warn);">Matched: "${step.matched_text}"</div>` : ""}
+          </div>
+          <div class="controls">
+            <button id="prevBtn" ${stepIndex === 0 ? "disabled" : ""}>← Prev</button>
+            <button id="nextBtn" ${stepIndex >= steps.length - 1 ? "disabled" : ""}>Next →</button>
+            <span class="progress">Step ${stepIndex + 1} / ${steps.length}</span>
+          </div>
+        </div>
+      `;
+      document.getElementById("prevBtn").onclick = () => { stepIndex--; renderDetail(); };
+      document.getElementById("nextBtn").onclick = () => { stepIndex++; renderDetail(); };
+    }
+
+    renderList();
+  </script>
+</body>
+</html>

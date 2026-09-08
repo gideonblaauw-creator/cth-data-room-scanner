@@ -1,0 +1,61 @@
+{
+  "dataroom_id": "sample-vertigreen-2026",
+  "company": "VertiGreen Robotics",
+  "description": "Synthetic cleantech startup fixture for HITL dry runs. No real client data.",
+  "files": [
+    {
+      "path": "overview.md",
+      "expected_label": "auto_ok",
+      "pillar": "market",
+      "notes": "Standard company overview — no sensitive tokens"
+    },
+    {
+      "path": "team.md",
+      "expected_label": "auto_ok",
+      "pillar": "team",
+      "notes": "Founder bios with public LinkedIn-style info"
+    },
+    {
+      "path": "tech-stack.md",
+      "expected_label": "auto_ok",
+      "pillar": "traction",
+      "notes": "Architecture summary, no credentials"
+    },
+    {
+      "path": "financials-summary.md",
+      "expected_label": "needs_human",
+      "pillar": "financials",
+      "notes": "Contains placeholder revenue figures — human should sanity-check"
+    },
+    {
+      "path": "fake-invoice-redacted.txt",
+      "expected_label": "needs_human",
+      "pillar": "financials",
+      "notes": "Redacted invoice with partial account numbers"
+    },
+    {
+      "path": "cap-table-outline.md",
+      "expected_label": "unclear",
+      "pillar": "legal",
+      "notes": "Informal cap table — ownership percentages ambiguous"
+    },
+    {
+      "path": "ip-patents.md",
+      "expected_label": "auto_ok",
+      "pillar": "legal",
+      "notes": "Public patent application numbers only"
+    },
+    {
+      "path": "esg-impact.md",
+      "expected_label": "auto_ok",
+      "pillar": "impact",
+      "notes": "Impact metrics with cited methodology"
+    },
+    {
+      "path": "draft-contract-excerpt.md",
+      "expected_label": "unclear",
+      "pillar": "legal",
+      "notes": "Unsigned LOI excerpt — unclear if binding"
+    }
+  ]
+}
