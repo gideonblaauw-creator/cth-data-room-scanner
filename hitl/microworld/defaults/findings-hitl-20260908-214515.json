@@ -1,0 +1,203 @@
+{
+  "run_id": "hitl-20260908-214515",
+  "scanned_at": "2026-09-08T21:45:15+00:00",
+  "company": "VertiGreen Robotics",
+  "dataroom_id": "sample-vertigreen-2026",
+  "fixture_root": "/workspace/fixtures/sample-dataroom",
+  "gate_findings": [
+    {
+      "finding_id": "F001",
+      "fixture_path": "overview.md",
+      "pillar": "market",
+      "label": "unclear",
+      "expected_label": "auto_ok",
+      "agent_suggestion": "verify_cap_table",
+      "rule_fired": "R005",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R005",
+          "description": "Cap table or dilution signals need verification",
+          "matched_text": "%"
+        },
+        {
+          "step": 2,
+          "rule_id": "R008",
+          "description": "Standard company overview content",
+          "matched_text": "Sector"
+        }
+      ],
+      "excerpt": "# VertiGreen Robotics \u2014 Company Overview  **Sector:** AgriTech / Precision Irrigation   **Founded:** 2023   **HQ:** Wageningen, Netherlands   **Stage:** Seed (raising \u20ac1.2M)  ## Mission  VertiGreen builds autonomous micro-irrigation nodes that reduce water use by 35% in greenhouse horticulture using soil-moisture sensing and edge ML.  ## Product  - **Node hardware:** Solar-powered sensor + valve a",
+      "moment": "overview_metric"
+    },
+    {
+      "finding_id": "F004",
+      "fixture_path": "financials-summary.md",
+      "pillar": "financials",
+      "label": "needs_human",
+      "expected_label": "needs_human",
+      "agent_suggestion": "manual_review",
+      "rule_fired": "R003",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R003",
+          "description": "Document self-flags for human review",
+          "matched_text": "Human review required"
+        },
+        {
+          "step": 2,
+          "rule_id": "R005",
+          "description": "Cap table or dilution signals need verification",
+          "matched_text": "%"
+        },
+        {
+          "step": 3,
+          "rule_id": "R006",
+          "description": "Unaudited or projected financial figures",
+          "matched_text": "Draft"
+        }
+      ],
+      "excerpt": "# Financial Summary (Draft \u2014 Q1 2026)  *Synthetic fixture. Not audited. Human review required.*  ## Revenue  | Quarter | MRR (\u20ac) | Notes | |---------|---------|-------| | Q3 2025 | 4,200 | 2 pilot conversions | | Q4 2025 | 6,800 | Added third greenhouse | | Q1 2026 | 8,400 | Projected run-rate |  ## Burn  - Monthly opex: ~\u20ac62,000 (salaries + hardware inventory) - Cash on hand (per management): \u20ac34",
+      "moment": "unaudited_financials"
+    },
+    {
+      "finding_id": "F005",
+      "fixture_path": "fake-invoice-redacted.txt",
+      "pillar": "financials",
+      "label": "needs_human",
+      "expected_label": "needs_human",
+      "agent_suggestion": "confirm_redaction",
+      "rule_fired": "R002",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R002",
+          "description": "Partial bank account number visible",
+          "matched_text": "IBAN: NL**"
+        },
+        {
+          "step": 2,
+          "rule_id": "R003",
+          "description": "Document self-flags for human review",
+          "matched_text": "human should"
+        },
+        {
+          "step": 3,
+          "rule_id": "R005",
+          "description": "Cap table or dilution signals need verification",
+          "matched_text": "%"
+        }
+      ],
+      "excerpt": "VERTIGREEN ROBOTICS B.V. Invoice #VG-2026-0142 Date: 2026-01-15  Bill To: Greenhouse Partners Gelderland B.V. [ADDRESS REDACTED] KvK: 12****89  Description                          Qty    Unit     Total Irrigation Node v2.1                  40   \u20ac420.00  \u20ac16,800.00 Installation (pilot tier)              1   \u20ac2,400.00 \u20ac2,400.00                                     \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 Subtotal",
+      "moment": "iban_redaction"
+    },
+    {
+      "finding_id": "F006",
+      "fixture_path": "cap-table-outline.md",
+      "pillar": "legal",
+      "label": "needs_human",
+      "expected_label": "unclear",
+      "agent_suggestion": "verify_financials",
+      "rule_fired": "R006",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R004",
+          "description": "Ambiguous legal or binding language",
+          "matched_text": "Unsigned"
+        },
+        {
+          "step": 2,
+          "rule_id": "R005",
+          "description": "Cap table or dilution signals need verification",
+          "matched_text": "Cap Table"
+        },
+        {
+          "step": 3,
+          "rule_id": "R006",
+          "description": "Unaudited or projected financial figures",
+          "matched_text": "draft"
+        }
+      ],
+      "excerpt": "# Cap Table Outline (Informal)  *Unsigned working draft \u2014 not a formal cap table export.*  ## Stated ownership (founder spreadsheet)  | Holder | Shares (approx) | % (stated) | Notes | |--------|-----------------|------------|-------| | Mira van Dijk | 520,000 | 52% | Common | | Tom\u00e1s Herrera | 380,000 | 38% | Common | | ESOP pool | 100,000 | 10% | Unallocated | | **Total** | 1,000,000 | 100% | |",
+      "moment": "safe_cap_table"
+    },
+    {
+      "finding_id": "F008",
+      "fixture_path": "esg-impact.md",
+      "pillar": "impact",
+      "label": "unclear",
+      "expected_label": "auto_ok",
+      "agent_suggestion": "verify_cap_table",
+      "rule_fired": "R005",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R005",
+          "description": "Cap table or dilution signals need verification",
+          "matched_text": "%"
+        }
+      ],
+      "excerpt": "# ESG & Impact  ## Water savings (pilot methodology)  - Baseline: grower-reported irrigation volume (2024 season) - Treatment: VertiGreen nodes on 3 zones, same crop (tomatoes) - Result: **34.8% median reduction** in liters/kg produce (n=3 sites)  ## Carbon  - Estimated 0.12 tCO\u2082e avoided per node-year (grid mix NL 2025, IEA factor)  ## Reporting  - Methodology doc: `impact-methodology-v0.3.pdf` (",
+      "moment": "impact_metrics"
+    },
+    {
+      "finding_id": "F009",
+      "fixture_path": "draft-contract-excerpt.md",
+      "pillar": "legal",
+      "label": "needs_human",
+      "expected_label": "unclear",
+      "agent_suggestion": "verify_financials",
+      "rule_fired": "R006",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R004",
+          "description": "Ambiguous legal or binding language",
+          "matched_text": "Unsigned"
+        },
+        {
+          "step": 2,
+          "rule_id": "R006",
+          "description": "Unaudited or projected financial figures",
+          "matched_text": "DRAFT"
+        }
+      ],
+      "excerpt": "# Letter of Intent \u2014 Excerpt (Unsigned)  **Between:** VertiGreen Robotics B.V. and Greenhouse Partners Gelderland B.V.   **Date:** 2025-11-02   **Status:** DRAFT \u2014 signatures block empty  ---  > Greenhouse Partners expresses **non-binding interest** in deploying up to 80 irrigation nodes across two facilities in 2026, subject to successful Q1 pilot metrics and board approval.  > Pricing shall foll",
+      "moment": "unsigned_contract"
+    },
+    {
+      "finding_id": "F010",
+      "fixture_path": "overview.md",
+      "pillar": "traction",
+      "label": "needs_human",
+      "expected_label": "needs_human",
+      "agent_suggestion": "verify_metric_source",
+      "rule_fired": "R_METRIC",
+      "moment": "hallucinated_metric",
+      "title_en": "Unsupported water-savings claim (35% vs 34.8%)",
+      "title_es": "Reclamaci\u00f3n de ahorro de agua no respaldada (35% vs 34.8%)",
+      "reasoning_steps": [
+        {
+          "step": 1,
+          "rule_id": "R_METRIC",
+          "description": "Marketing claim (35% water reduction) does not match ESG pilot result (34.8%) or cited methodology",
+          "matched_text": "35%"
+        },
+        {
+          "step": 2,
+          "rule_id": "R003",
+          "description": "Cross-document metric inconsistency needs human verification",
+          "matched_text": "34.8%"
+        }
+      ],
+      "excerpt": "Overview claims 35% water reduction; ESG report cites 34.8% median \u2014 verify source before external share."
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "needs_human": 5,
+    "unclear": 2
+  }
+}

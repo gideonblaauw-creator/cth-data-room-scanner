@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "run_id": "hitl-20260908-214515",
+  "quiz_passed": true,
+  "score": 5,
+  "total": 5,
+  "answered_at": "2026-09-08T22:10:00+00:00",
+  "source": "explainer-quiz",
+  "answers": [
+    { "id": "Q1", "selected": 0, "correct": true },
+    { "id": "Q2", "selected": 2, "correct": true },
+    { "id": "Q3", "selected": 2, "correct": true },
+    { "id": "Q4", "selected": 1, "correct": true },
+    { "id": "Q5", "selected": 1, "correct": true }
+  ]
+}
