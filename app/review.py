@@ -35,15 +35,82 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _allowed_roots() -> tuple[Path, ...]:
+    return (REPO_ROOT.resolve(), OUTPUT_DIR.resolve())
+
+
+def _path_within_allowed_roots(path: Path) -> bool:
+    try:
+        resolved = path.resolve()
+    except (OSError, ValueError):
+        return False
+    for root in _allowed_roots():
+        try:
+            resolved.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _resolve_path_param(path_param: str) -> Path | None:
+    """Resolve ?path= under REPO_ROOT or OUTPUT_DIR only (no traversal)."""
+    if not path_param or ".." in Path(path_param).parts:
+        return None
+    candidate = Path(path_param)
+    if candidate.is_absolute():
+        candidates = [candidate]
+    else:
+        candidates = [REPO_ROOT / candidate, OUTPUT_DIR / candidate]
+    for c in candidates:
+        try:
+            resolved = c.resolve()
+        except (OSError, ValueError):
+            continue
+        if _path_within_allowed_roots(resolved) and resolved.is_file():
+            return resolved
+    return None
+
+
+def _becaps_demo_path() -> Path:
+    """Generate BeCaps findings on the fly if missing."""
+    from scanner.findings_from_score import (
+        findings_from_score,
+        findings_output_path,
+        save_findings,
+    )
+    from scanner.score_runner import load_becaps_fixture
+
+    scoring = load_becaps_fixture()
+    scan_date = scoring["company"]["scan_date"]
+    out = findings_output_path("becaps-demo", scan_date, OUTPUT_DIR)
+    if not out.exists():
+        doc = findings_from_score(scoring, source="dry_run", run_id="becaps-demo")
+        save_findings(doc, out)
+    return out
+
+
+def _demo_alias_path(job_id: str) -> Path | None:
+    aliases = {
+        "demo": REPO_ROOT / "out" / "findings.json",
+        "becaps": _becaps_demo_path(),
+    }
+    path = aliases.get(job_id)
+    if path and path.exists():
+        return path
+    return None
+
+
 def _resolve_findings_path(job_id: str) -> Path | None:
-    """Resolve findings file from RQ job result or explicit path query."""
+    """Resolve findings file from ?path=, demo aliases, or RQ job result."""
     path_param = request.args.get("path")
-    if path_param:
-        p = Path(path_param)
-        if not p.is_absolute():
-            p = REPO_ROOT / p
-        if p.exists():
-            return p
+    if path_param is not None:
+        resolved = _resolve_path_param(path_param)
+        return resolved  # invalid explicit path → None (no alias fallback)
+
+    alias = _demo_alias_path(job_id)
+    if alias:
+        return alias
 
     try:
         job = Job.fetch(job_id, connection=redis_conn)
@@ -56,10 +123,9 @@ def _resolve_findings_path(job_id: str) -> Path | None:
     result = job.result
     if isinstance(result, dict) and result.get("findings_path"):
         p = Path(result["findings_path"])
-        if p.exists():
+        if p.exists() and _path_within_allowed_roots(p):
             return p
 
-    # Fallback: scan output dir for slug-date pattern stored in result
     if isinstance(result, dict):
         slug = result.get("slug")
         scan_date = result.get("scan_date")
@@ -91,16 +157,6 @@ def review_job(job_id: str):
 @review_bp.route("/api/review/<job_id>/findings")
 def api_findings(job_id: str):
     findings_path = _resolve_findings_path(job_id)
-    if not findings_path:
-        # Allow loading fixture/demo files by job_id alias
-        aliases = {
-            "demo": REPO_ROOT / "out" / "findings.json",
-            "becaps": _becaps_demo_path(),
-        }
-        findings_path = aliases.get(job_id)
-        if findings_path and not findings_path.exists():
-            findings_path = None
-
     if not findings_path or not findings_path.exists():
         abort(404, description="Findings not found for this job")
 
@@ -178,19 +234,6 @@ def _validate_locks_payload(payload: dict) -> list[str]:
         if isinstance(fid, str) and not (fid.startswith("S") or fid.startswith("F")):
             errors.append(f"locks[{i}] finding_id must start with S or F")
     return errors
-
-
-def _becaps_demo_path() -> Path:
-    """Generate BeCaps findings on the fly if missing."""
-    from scanner.findings_from_score import findings_from_score, save_findings, findings_output_path
-    from scanner.score_runner import load_becaps_fixture
-
-    out = findings_output_path("becaps-demo", "2026-09-12", OUTPUT_DIR)
-    if not out.exists():
-        scoring = load_becaps_fixture()
-        doc = findings_from_score(scoring, source="dry_run", run_id="becaps-demo")
-        save_findings(doc, out)
-    return out
 
 
 def normalize_fixture_file(path: Path) -> dict:

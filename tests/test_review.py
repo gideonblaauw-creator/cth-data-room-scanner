@@ -141,6 +141,11 @@ class TestReviewFlaskRoutes:
     @pytest.fixture
     def client(self, tmp_path, monkeypatch):
         monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        import scanner.config as cfg
+        import app.review as review_mod
+
+        monkeypatch.setattr(cfg, "OUTPUT_DIR", tmp_path)
+        monkeypatch.setattr(review_mod, "OUTPUT_DIR", tmp_path)
         from app.main import app
 
         app.config["TESTING"] = True
@@ -159,13 +164,62 @@ class TestReviewFlaskRoutes:
         assert data["company"]
         assert len(data["findings"]) >= 1
 
-    def test_api_save_locks(self, client, tmp_path, monkeypatch):
+    def test_becaps_locks_get_post_without_path(self, client, tmp_path, monkeypatch):
+        """Demo alias must resolve for locks GET/POST, not only findings GET."""
         monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
-        # Ensure becaps findings exist
+        findings_res = client.get("/api/review/becaps/findings")
+        assert findings_res.status_code == 200
+        findings = findings_res.get_json()
+
+        get_res = client.get("/api/review/becaps/locks")
+        assert get_res.status_code == 200
+        assert "locks" in get_res.get_json() or get_res.get_json().get("version") is None
+
+        locks = {
+            "version": 1,
+            "run_id": findings["run_id"],
+            "company": findings["company"],
+            "quiz_passed": True,
+            "locked_at": "2026-09-12T14:00:00+00:00",
+            "locks": [{
+                "finding_id": findings["findings"][0]["finding_id"],
+                "fixture_path": findings["findings"][0]["source_path"],
+                "agent_suggestion": findings["findings"][0]["agent_suggestion"],
+                "agent_label": findings["findings"][0]["label"],
+                "human_decision": "agree",
+                "rationale": "Reviewed and confirmed for audit trail.",
+                "status": "reviewed",
+                "locked_at": "2026-09-12T14:00:01+00:00",
+            }],
+        }
+        post_res = client.post(
+            "/api/review/becaps/locks",
+            json=locks,
+            content_type="application/json",
+        )
+        assert post_res.status_code == 200, post_res.get_json()
+        assert post_res.get_json()["ok"] is True
+
+        get_res2 = client.get("/api/review/becaps/locks")
+        assert get_res2.status_code == 200
+        saved = get_res2.get_json()
+        assert saved["version"] == 1
+        assert len(saved["locks"]) == 1
+
+    def test_path_traversal_rejected(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        client.get("/api/review/becaps/findings")
+        for bad_path in ("../../../etc/passwd", "/etc/passwd", "..\\..\\etc\\passwd"):
+            res = client.get(f"/api/review/becaps/findings?path={bad_path}")
+            assert res.status_code == 404
+
+    def test_api_save_locks_with_explicit_path(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
         client.get("/api/review/becaps/findings")
         scoring = load_becaps_fixture()
         doc = findings_from_score(scoring, source="dry_run", run_id="becaps-demo")
-        path = tmp_path / "becaps-demo-2026-04.findings.json"
+        scan_date = scoring["company"]["scan_date"]
+        path = tmp_path / f"becaps-demo-{scan_date[:7]}.findings.json"
         save_findings(doc, path)
 
         locks = {
@@ -185,8 +239,9 @@ class TestReviewFlaskRoutes:
                 "locked_at": "2026-09-12T14:00:01+00:00",
             }],
         }
+        rel = path.name
         res = client.post(
-            f"/api/review/becaps/locks?path={path}",
+            f"/api/review/becaps/locks?path={rel}",
             json=locks,
             content_type="application/json",
         )

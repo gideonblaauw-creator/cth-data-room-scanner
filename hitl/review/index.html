@@ -151,6 +151,8 @@
       <option value="unclear">unclear</option>
       <option value="auto_ok">auto_ok</option>
     </select>
+    <button type="button" id="topDownload" class="primary" disabled>Download JSON</button>
+    <button type="button" id="topSave" disabled>Save to server</button>
     <span id="runMeta" class="mono" style="color:var(--muted);margin-left:auto"></span>
   </div>
 
@@ -189,6 +191,7 @@
         downloadLocks: "Download review-locks.json",
         saveServer: "Save to server",
         savedServer: "Saved to server",
+        exportPartial: "Export locked decisions (partial progress OK)",
         progress: (l, t) => `${l} / ${t} locked`,
         placeholder: "Select a finding to review agent reasoning and lock your decision.",
         agree: "Agree", override: "Override", defer: "Defer",
@@ -215,6 +218,7 @@
         downloadLocks: "Descargar review-locks.json",
         saveServer: "Guardar en servidor",
         savedServer: "Guardado en servidor",
+        exportPartial: "Exportar decisiones bloqueadas (progreso parcial OK)",
         progress: (l, t) => `${l} / ${t} bloqueados`,
         placeholder: "Seleccione un hallazgo para revisar y bloquear su decisión.",
         agree: "De acuerdo", override: "Anular", defer: "Aplazar",
@@ -333,7 +337,17 @@
       };
     }
 
+    function updateExportButtons() {
+      const locked = lockedCount();
+      const hasLocks = locked > 0;
+      el("topDownload").disabled = !hasLocks;
+      el("topSave").disabled = !hasLocks;
+      el("topDownload").textContent = t("downloadLocks");
+      el("topSave").textContent = t("saveServer");
+    }
+
     function updateBanners() {
+      updateExportButtons();
       const locksBanner = el("locksBanner");
       if (allLocked()) {
         locksBanner.className = "banner success";
@@ -362,6 +376,10 @@
 
     async function saveLocksToServer() {
       const doc = buildLocksDocument();
+      if (!doc.locks.length) {
+        alert(lang === "en" ? "Lock at least one finding first." : "Bloquee al menos un hallazgo primero.");
+        return;
+      }
       const res = await fetch(`/api/review/${encodeURIComponent(jobId)}/locks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -511,6 +529,8 @@
     el("langEn").onclick = () => { lang = "en"; applyLang(); };
     el("langEs").onclick = () => { lang = "es"; applyLang(); };
     el("labelFilter").onchange = (e) => { labelFilter = e.target.value; renderList(); };
+    el("topDownload").onclick = downloadLocks;
+    el("topSave").onclick = saveLocksToServer;
 
     (async () => {
       try {
