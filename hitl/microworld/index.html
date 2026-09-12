@@ -267,6 +267,13 @@
     const NOTION_DB = "https://app.notion.com/p/bb52cfa45b6744e59983528480fbab4b";
     const REPO_URL = "https://github.com/gideonblaauw-creator/cth-data-room-scanner";
     const DEFAULT_FINDINGS_URL = "defaults/findings-hitl-20260908-214515.json";
+    const STABLE_HOST_DOC = "hitl/STABLE-HOST.md";
+
+    function isStaticPublicHost() {
+      const h = window.location.hostname;
+      if (h === "localhost" || h === "127.0.0.1" || h.endsWith(".local")) return false;
+      return true;
+    }
 
     const QUIZ_QUESTIONS = [
       {
@@ -465,7 +472,12 @@
     async function loadFindings() {
       const params = new URLSearchParams(window.location.search);
       const findingsParam = params.get("findings");
-      const paths = findingsParam ? [findingsParam] : ["../../out/findings.json", "../out/findings.json", "out/findings.json", DEFAULT_FINDINGS_URL];
+      const localDevPaths = ["../../out/findings.json", "../out/findings.json", "out/findings.json"];
+      const paths = findingsParam
+        ? [findingsParam]
+        : isStaticPublicHost()
+          ? [DEFAULT_FINDINGS_URL]
+          : [...localDevPaths, DEFAULT_FINDINGS_URL];
       for (const p of paths) {
         try {
           findingsDoc = normalizeFindings(await fetchJson(p));
@@ -576,7 +588,16 @@
 
     function renderContextPanel() {
       const en = lang === "en";
+      const staticBanner = isStaticPublicHost()
+        ? `<div class="card" style="border-color:var(--accent-bright);margin-bottom:1rem">
+            <strong>${en ? "Public training host" : "Host público de entrenamiento"}</strong>
+            <p style="margin:0.5rem 0 0">${en
+              ? "You are on the stable static microworld (synthetic VertiGreen only). Production client review stays on localhost / Tailscale — see <code>hitl/STABLE-HOST.md</code>."
+              : "Está en el micromundo estático público (solo VertiGreen sintético). La revisión de clientes reales permanece en localhost / Tailscale."}</p>
+          </div>`
+        : "";
       el("panel-context").innerHTML = `
+        ${staticBanner}
         <h2>${en ? "Why this microworld?" : "¿Por qué este micromundo?"}</h2>
         <p>${en
           ? "The <strong>Dataroom Reviewer HITL loop</strong> trains reviewers to consciously agree, override, or defer on agent findings before they enter the shared Notion Decisions database. This page merges the Explainer, interactive microworld, and Decisions/GH surfaces into one ≤10-minute local loop."

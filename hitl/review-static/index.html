@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Review Demo — NOT production</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4f;
+      --text: #e6edf3;
+      --muted: #8b9cb3;
+      --warn: #d29922;
+      --danger: #f85149;
+      --accent: #3fb950;
+      --unclear: #a371f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .banner {
+      background: rgba(248, 81, 73, 0.15);
+      border-bottom: 2px solid var(--danger);
+      padding: 0.85rem 1.5rem;
+      font-size: 0.9rem;
+    }
+    .banner strong { color: var(--danger); }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header h1 { margin: 0 0 0.25rem; font-size: 1.1rem; }
+    header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+    main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 120px); }
+    aside { border-right: 1px solid var(--border); padding: 1rem; overflow-y: auto; }
+    .panel { padding: 1.25rem 1.5rem; overflow-y: auto; }
+    .finding-item {
+      display: block; width: 100%; text-align: left;
+      padding: 0.6rem 0.75rem; margin-bottom: 0.35rem;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: transparent; color: var(--text); cursor: pointer; font-size: 0.8rem;
+    }
+    .finding-item:hover, .finding-item.active {
+      border-color: var(--accent);
+      background: rgba(63, 185, 80, 0.08);
+    }
+    .badge {
+      display: inline-block; font-size: 0.65rem; padding: 0.1rem 0.4rem;
+      border-radius: 4px; margin-left: 0.35rem; text-transform: uppercase;
+    }
+    .badge.auto_ok { background: rgba(63,185,80,0.2); color: var(--accent); }
+    .badge.needs_human { background: rgba(248,81,73,0.2); color: var(--danger); }
+    .badge.unclear { background: rgba(163,113,247,0.2); color: var(--unclear); }
+    .meta-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .meta-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.75rem 1rem;
+    }
+    .meta-card label { display: block; font-size: 0.7rem; color: var(--muted); }
+    footer {
+      grid-column: 1 / -1; padding: 0.75rem 1.5rem;
+      border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--muted);
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <strong>DEMO ONLY — NOT PRODUCTION REVIEW</strong>
+    Static shell with baked BeCaps-style calibration findings. No Flask, no Drive API, no live client data.
+    Production <code>/review</code> stays on localhost / Tailscale. See <code>hitl/STABLE-HOST.md</code>.
+  </div>
+  <header>
+    <h1>Review Static Demo</h1>
+    <p id="runMeta">Loading demo findings…</p>
+  </header>
+  <main>
+    <aside><div id="findingList"></div></aside>
+    <section class="panel"><div id="detail"><p style="color:var(--muted)">Select a finding.</p></div></section>
+    <footer>
+      Training microworld (public): <a href="https://cth-hitl-lab.vercel.app/" target="_blank" rel="noopener">cth-hitl-lab.vercel.app</a>
+      · Repo: <a href="https://github.com/gideonblaauw-creator/cth-data-room-scanner" target="_blank" rel="noopener">cth-data-room-scanner</a>
+    </footer>
+  </main>
+  <script>
+    const DEFAULT_FINDINGS = "findings-becaps-demo.json";
+    let data = null;
+    let selectedId = null;
+
+    async function load() {
+      const params = new URLSearchParams(window.location.search);
+      const url = params.get("findings") || DEFAULT_FINDINGS;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to load ${url}`);
+      data = await res.json();
+      document.getElementById("runMeta").textContent =
+        `${data.company} · ${data.run_id} · ${data.findings.length} findings (demo)`;
+      selectedId = data.findings[0]?.finding_id || null;
+      renderList();
+      renderDetail();
+    }
+
+    function renderList() {
+      const list = document.getElementById("findingList");
+      list.innerHTML = data.findings.map((f) => `
+        <button class="finding-item ${f.finding_id === selectedId ? "active" : ""}" data-id="${f.finding_id}">
+          ${f.finding_id}<span class="badge ${f.label}">${f.label}</span>
+          <div style="color:var(--muted);margin-top:0.2rem;font-size:0.72rem;">${f.fixture_path}</div>
+        </button>
+      `).join("");
+      list.querySelectorAll(".finding-item").forEach((btn) => {
+        btn.onclick = () => { selectedId = btn.dataset.id; renderList(); renderDetail(); };
+      });
+    }
+
+    function renderDetail() {
+      const f = data.findings.find((x) => x.finding_id === selectedId);
+      const detail = document.getElementById("detail");
+      if (!f) { detail.innerHTML = ""; return; }
+      const steps = (f.reasoning_steps || []).map((s, i) =>
+        `<li><strong>${s.rule_id}</strong> — ${s.description}${s.matched_text ? ` <em style="color:var(--warn)">"${s.matched_text}"</em>` : ""}</li>`
+      ).join("");
+      detail.innerHTML = `
+        <h2 style="margin:0 0 1rem;font-size:1rem;">${f.finding_id} — ${f.fixture_path}</h2>
+        <div class="meta-grid">
+          <div class="meta-card"><label>Pillar</label>${f.pillar || "—"}</div>
+          <div class="meta-card"><label>Rule</label>${f.rule_fired}</div>
+          <div class="meta-card"><label>Label</label><span class="badge ${f.label}">${f.label}</span></div>
+          <div class="meta-card"><label>Suggestion</label>${f.agent_suggestion}</div>
+        </div>
+        <p style="font-size:0.85rem;color:var(--muted);">${f.excerpt || ""}</p>
+        <h3 style="font-size:0.95rem;">Reasoning steps</h3>
+        <ul style="font-size:0.85rem;">${steps || "<li>No steps.</li>"}</ul>
+        <p style="font-size:0.8rem;color:var(--muted);margin-top:1.5rem;">Read-only demo — no lock-in or Notion push.</p>
+      `;
+    }
+
+    load().catch((err) => {
+      document.getElementById("runMeta").textContent = "Error: " + err.message;
+    });
+  </script>
+</body>
+</html>

@@ -2,14 +2,25 @@
 
 A **local, self-contained** tabbed HTML app for the Dataroom Reviewer HITL loop. Merges the Explainer quiz, interactive decision lock-in microworld, Decisions DB mirror, GH repo map, and clarifications capture. Synthetic VertiGreen fixtures only — not production UI.
 
+## Stable public URL (training)
+
+**https://cth-hitl-lab.vercel.app/** — synthetic VertiGreen microworld on Vercel (no SSO, no client secrets).
+
+```bash
+make hitl-host-url    # prints URL from hitl/STABLE-HOST.md
+```
+
+See `hitl/STABLE-HOST.md` for deploy recipe and product split (public microworld vs Tailscale-only production review).
+
 ## Serve locally
 
 ```bash
-# From repo root (so fixture/quiz paths resolve)
-python3 -m http.server 8765
+make hitl-static-serve
+# → http://127.0.0.1:8765/
 
-# Visit
-open http://127.0.0.1:8765/hitl/microworld/
+# Or from repo root (legacy — also resolves out/findings.json)
+python3 -m http.server 8765
+# Visit http://127.0.0.1:8765/hitl/microworld/
 ```
 
 ## Tabs

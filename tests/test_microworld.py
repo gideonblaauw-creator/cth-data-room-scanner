@@ -95,6 +95,12 @@ class TestMicroworldIndex:
         assert 'notion_api_token="' not in html
         assert "notion_api_token='" not in html
 
+    def test_index_static_first_findings_loading(self):
+        html = INDEX_HTML.read_text()
+        assert 'DEFAULT_FINDINGS_URL = "defaults/findings-hitl-20260908-214515.json"' in html
+        assert "isStaticPublicHost()" in html
+        assert "isStaticPublicHost()" in html.split("async function loadFindings")[1]
+
 
 class TestMicroworldLockSchema:
     def test_schema_file_valid_json(self):

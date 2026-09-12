@@ -1,0 +1,80 @@
+{
+  "run_id": "demo-becaps-calibration-20260415",
+  "scanned_at": "2026-04-15T12:00:00+00:00",
+  "company": "BeCaps (DEMO — calibration reference only)",
+  "dataroom_id": "demo-not-production",
+  "fixture_root": "fixtures/becaps_scoring.json",
+  "demo": true,
+  "demo_notice": "Synthetic HITL-style findings derived from public CTH calibration metadata. NOT live client Drive data. Do not use for production review.",
+  "findings": [
+    {
+      "finding_id": "D001",
+      "fixture_path": "financials/pipeline-dashboard.md",
+      "pillar": "financials",
+      "label": "needs_human",
+      "agent_suggestion": "request_revenue_evidence",
+      "rule_fired": "R006",
+      "excerpt": "Pilar Finanzas 3.0 — sin ingresos recurrentes documentados; unit economics no validadas.",
+      "reasoning_steps": [
+        { "step": 1, "rule_id": "R006", "description": "Unaudited or projected financial figures", "matched_text": "sin ingresos recurrentes" },
+        { "step": 2, "rule_id": "R003", "description": "Document self-flags for human review", "matched_text": "unit economics no validadas" }
+      ]
+    },
+    {
+      "finding_id": "D002",
+      "fixture_path": "legal/cap-table-draft.pdf",
+      "pillar": "legal",
+      "label": "unclear",
+      "agent_suggestion": "legal_review",
+      "rule_fired": "R005",
+      "excerpt": "Legal & IP 3.0 — cap table preliminar; confirmar SAFEs y acuerdos de advisors.",
+      "reasoning_steps": [
+        { "step": 1, "rule_id": "R005", "description": "Cap table or dilution signals need verification", "matched_text": "cap table preliminar" }
+      ]
+    },
+    {
+      "finding_id": "D003",
+      "fixture_path": "team/org-chart.md",
+      "pillar": "team",
+      "label": "auto_ok",
+      "agent_suggestion": "include_in_report",
+      "rule_fired": "R008",
+      "excerpt": "Equipo 4.0 — fundadores con PhD biotech + experiencia industrial; perfil comercial en hiring plan.",
+      "reasoning_steps": [
+        { "step": 1, "rule_id": "R008", "description": "Standard company overview content", "matched_text": "Equipo fundador" }
+      ]
+    },
+    {
+      "finding_id": "D004",
+      "fixture_path": "impact/sustainability-narrative.md",
+      "pillar": "impact",
+      "label": "auto_ok",
+      "agent_suggestion": "include_in_report",
+      "rule_fired": "R008",
+      "excerpt": "Impacto 4.0 — narrativa clara de reducción de desperdicio agrícola vía microencapsulación.",
+      "reasoning_steps": [
+        { "step": 1, "rule_id": "R008", "description": "Standard company overview content", "matched_text": "reducción de desperdicio" }
+      ]
+    },
+    {
+      "finding_id": "D005",
+      "fixture_path": "eligibility/exclusivity-note.txt",
+      "pillar": "market",
+      "label": "needs_human",
+      "agent_suggestion": "confirm_exclusivity",
+      "rule_fired": "R004",
+      "excerpt": "Exclusividad CTH marcada TBD — confirmar disponibilidad antes de Fase 1.",
+      "reasoning_steps": [
+        { "step": 1, "rule_id": "R004", "description": "Ambiguous legal or binding language", "matched_text": "TBD" }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "auto_ok": 2,
+    "needs_human": 2,
+    "unclear": 1,
+    "overall_score_reference": 3.5,
+    "recommendation_reference": "go_phase1"
+  }
+}
