@@ -1,39 +1,49 @@
-# Microworld — Finding Scrubber Playground
+# Microworld — VertiGreen HITL Micro-Sim
 
-A **local, self-contained** learning artifact for stepping through synthetic agent reasoning on dataroom findings. This is not production UI.
+A **local, self-contained** guided review (~2–3 min) for practicing human-in-the-loop decisions on synthetic VertiGreen dataroom findings. This is not production UI.
 
 ## How to open
 
-1. Run the HITL demo to generate findings:
-   ```bash
-   make hitl-demo
-   ```
-2. Open the microworld in a browser:
-   ```bash
-   # macOS
-   open hitl/microworld/index.html
+Open directly in a browser — no server or `findings.json` required:
 
-   # Linux
-   xdg-open hitl/microworld/index.html
+```bash
+# macOS
+open hitl/microworld/index.html
 
-   # Or serve locally (optional)
-   python -m http.server 8765 --directory hitl/microworld
-   # then visit http://127.0.0.1:8765/
-   ```
-3. Click **Load findings.json** and select `out/findings.json` from the repo root (file picker cannot read arbitrary paths without user action).
+# Linux
+xdg-open hitl/microworld/index.html
 
-## What it shows
+# Or serve locally (optional)
+python -m http.server 8765 --directory hitl/microworld
+# then visit http://127.0.0.1:8765/
+```
 
-For each finding:
+Link from Notion: paste the file path or host the static HTML on any static host.
 
-- **File** — fixture path in `fixtures/sample-dataroom/`
-- **Rule fired** — deterministic rule ID (e.g. `R002`)
-- **Suggested action** — agent proposal (`confirm_redaction`, `legal_review`, etc.)
-- **Scrubber** — step through reasoning steps one at a time
+## What it covers (4 moments)
 
-## Offline fallback
+| # | Scenario | Finding | Decision |
+|---|----------|---------|----------|
+| 1 | IBAN partial redaction | F005 | `confirm_redaction` |
+| 2 | Unaudited financial projections | F004 | `verify_financials` |
+| 3 | Ambiguous SAFE / cap table | F006 | `verify_cap_table` |
+| 4 | Hallucinated impact metric (42% vs 34.8%) | F-HALL | `reject_hallucination` |
 
-If no `findings.json` is loaded, the page uses embedded sample data from the VertiGreen fixture so you can explore the UI without running the demo first.
+Each moment: read agent suggestion → choose **agree**, **override**, or **defer** → brief feedback.
+
+## EN / ES
+
+Toggle **EN** / **ES** in the header. All copy swaps via client-side strings.
+
+## End screen
+
+**Return to Decisions DB** links to the Notion placeholder:
+
+`https://app.notion.com/p/bb52cfa45b6744e59983528480fbab4b`
+
+## Lab placement
+
+Beat 3 in the 5-beat HITL flow — **after** `out/notion/explainer.md`, **before** the Notion Decisions database. See `hitl/NOTION-HITL.md`.
 
 ## Geoffrey Litt mapping
 

@@ -3,272 +3,703 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HITL Finding Scrubber — VertiGreen Microworld</title>
+  <title>VertiGreen HITL Microworld — Dataroom Review</title>
   <style>
     :root {
-      --bg: #0f1419;
-      --surface: #1a2332;
-      --border: #2d3a4f;
-      --text: #e6edf3;
-      --muted: #8b9cb3;
-      --accent: #3fb950;
-      --warn: #d29922;
-      --danger: #f85149;
-      --unclear: #a371f7;
+      --bg: #0b1117;
+      --surface: #151d28;
+      --surface-2: #1c2735;
+      --border: #2a3848;
+      --text: #e8eef5;
+      --muted: #8fa3b8;
+      --accent: #3ecf8e;
+      --accent-dim: rgba(62, 207, 142, 0.12);
+      --warn: #e8b339;
+      --warn-dim: rgba(232, 179, 57, 0.12);
+      --danger: #f07178;
+      --danger-dim: rgba(240, 113, 120, 0.12);
+      --purple: #b794f6;
+      --purple-dim: rgba(183, 148, 246, 0.12);
+      --radius: 10px;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "SF Mono", "Fira Code", ui-monospace, monospace;
-      background: var(--bg);
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(ellipse at top, #132030 0%, var(--bg) 55%);
       color: var(--text);
-      line-height: 1.5;
+      line-height: 1.55;
       min-height: 100vh;
     }
+    .shell { max-width: 760px; margin: 0 auto; padding: 1.25rem 1rem 2rem; }
     header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-    header h1 { margin: 0 0 0.25rem; font-size: 1.1rem; font-weight: 600; }
-    header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
-    main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 80px); }
-    aside {
-      border-right: 1px solid var(--border);
-      padding: 1rem;
-      overflow-y: auto;
-    }
-    .panel {
-      padding: 1.25rem 1.5rem;
-      overflow-y: auto;
-    }
-    .finding-item {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 0.6rem 0.75rem;
-      margin-bottom: 0.35rem;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: transparent;
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.8rem;
-    }
-    .finding-item:hover, .finding-item.active {
-      border-color: var(--accent);
-      background: rgba(63, 185, 80, 0.08);
-    }
-    .badge {
-      display: inline-block;
-      font-size: 0.65rem;
-      padding: 0.1rem 0.4rem;
-      border-radius: 4px;
-      margin-left: 0.35rem;
-      text-transform: uppercase;
-    }
-    .badge.auto_ok { background: rgba(63,185,80,0.2); color: var(--accent); }
-    .badge.needs_human { background: rgba(248,81,73,0.2); color: var(--danger); }
-    .badge.unclear { background: rgba(163,113,247,0.2); color: var(--unclear); }
-    .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
       margin-bottom: 1.25rem;
+      flex-wrap: wrap;
     }
-    .meta-card {
-      background: var(--surface);
+    header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+    header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.82rem; }
+    .lang-toggle {
+      display: flex;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 0.75rem 1rem;
+      overflow: hidden;
+      flex-shrink: 0;
     }
-    .meta-card label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.2rem; }
-    .meta-card span { font-size: 0.9rem; word-break: break-all; }
-    .scrubber {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-top: 1rem;
-    }
-    .step-display {
-      min-height: 4rem;
-      padding: 1rem;
-      background: var(--bg);
-      border-radius: 6px;
-      margin: 0.75rem 0;
-      font-size: 0.9rem;
-    }
-    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-    button, .file-btn {
-      font-family: inherit;
-      font-size: 0.8rem;
-      padding: 0.45rem 0.85rem;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
+    .lang-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 0.4rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
       cursor: pointer;
     }
-    button:hover, .file-btn:hover { border-color: var(--accent); }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .progress { color: var(--muted); font-size: 0.8rem; }
-    input[type="file"] { display: none; }
-    .toolbar { margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    footer {
-      grid-column: 1 / -1;
-      padding: 0.75rem 1.5rem;
-      border-top: 1px solid var(--border);
+    .lang-toggle button.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .progress-bar {
+      height: 4px;
+      background: var(--surface);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .progress-bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #2dd4bf);
+      border-radius: 99px;
+      transition: width 0.35s ease;
+    }
+    .meta-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
       font-size: 0.75rem;
       color: var(--muted);
     }
+    .pill {
+      padding: 0.2rem 0.55rem;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 { margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 650; }
+    .card h3 { margin: 1rem 0 0.4rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+    .excerpt {
+      background: var(--bg);
+      border-left: 3px solid var(--warn);
+      padding: 0.85rem 1rem;
+      border-radius: 0 6px 6px 0;
+      font-family: "SF Mono", "Fira Code", ui-monospace, monospace;
+      font-size: 0.8rem;
+      color: #c9d6e3;
+      margin: 0.75rem 0;
+      white-space: pre-wrap;
+    }
+    .agent-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-size: 0.88rem;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge.needs_human { background: var(--danger-dim); color: var(--danger); }
+    .badge.unclear { background: var(--purple-dim); color: var(--purple); }
+    .badge.auto_ok { background: var(--accent-dim); color: var(--accent); }
+    .badge.override { background: var(--warn-dim); color: var(--warn); }
+    .choices { display: grid; gap: 0.55rem; margin-top: 1rem; }
+    .choice-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .choice-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-dim); }
+    .choice-btn:disabled { opacity: 0.55; cursor: default; }
+    .choice-btn .key {
+      flex-shrink: 0;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+    .choice-btn.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .feedback {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-size: 0.86rem;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.good { background: var(--accent-dim); border: 1px solid rgba(62, 207, 142, 0.35); }
+    .feedback.ok { background: var(--warn-dim); border: 1px solid rgba(232, 179, 57, 0.35); }
+    .feedback.neutral { background: var(--purple-dim); border: 1px solid rgba(183, 148, 246, 0.35); }
+    .nav-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .btn:hover:not(:disabled) { border-color: var(--accent); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #062015;
+    }
+    .btn.primary:hover:not(:disabled) { filter: brightness(1.06); }
+    .btn.link-btn {
+      background: transparent;
+      border-color: var(--accent);
+      color: var(--accent);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .summary-grid {
+      display: grid;
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0.75rem;
+      background: var(--bg);
+      border-radius: 6px;
+      font-size: 0.84rem;
+    }
+    .score-ring {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 4px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 0 auto 1rem;
+    }
+    footer {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .hidden { display: none !important; }
+    .timer { font-variant-numeric: tabular-nums; }
+    .reasoning {
+      margin-top: 0.75rem;
+      padding-left: 0.75rem;
+      border-left: 2px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .reasoning li { margin-bottom: 0.25rem; }
+    a { color: var(--accent); }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Finding Scrubber — HITL Microworld</h1>
-    <p>Synthetic VertiGreen fixture · Learning artifact · Not production UI</p>
-  </header>
-  <main>
-    <aside>
-      <div class="toolbar">
-        <label class="file-btn">
-          Load findings.json
-          <input type="file" id="fileInput" accept=".json" />
-        </label>
+  <div class="shell">
+    <header>
+      <div>
+        <h1 id="title">VertiGreen HITL Microworld</h1>
+        <p id="subtitle">Synthetic dataroom review · ~2–3 min · Not a production UI</p>
       </div>
-      <div id="findingList"></div>
-    </aside>
-    <section class="panel">
-      <div id="detail">
-        <p style="color: var(--muted)">Select a finding or load <code>out/findings.json</code> from <code>make hitl-demo</code>.</p>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button type="button" id="langEn" class="active" aria-pressed="true">EN</button>
+        <button type="button" id="langEs" aria-pressed="false">ES</button>
       </div>
-    </section>
-    <footer>
-      Geoffrey Litt — <em>Micro worlds</em>: scrub through agent reasoning before deciding in the Notion shared space.
-      See <code>hitl/NOTION-HITL.md</code> and <code>hitl/microworld/README.md</code>.
+    </header>
+
+    <div class="progress-bar" aria-hidden="true"><span id="progressFill" style="width: 0%"></span></div>
+    <div class="meta-row" id="metaRow"></div>
+
+    <main id="app"></main>
+
+    <footer id="footer">
+      Geoffrey Litt — <em>Micro worlds</em> · See <code>hitl/NOTION-HITL.md</code>
     </footer>
-  </main>
+  </div>
+
   <script>
-    const SAMPLE = {
-      run_id: "hitl-sample",
-      company: "VertiGreen Robotics",
-      findings: [
-        {
-          finding_id: "F004",
-          fixture_path: "financials-summary.md",
-          pillar: "financials",
-          label: "needs_human",
-          agent_suggestion: "verify_financials",
-          rule_fired: "R006",
-          excerpt: "Financial Summary (Draft — Q1 2026) Synthetic fixture. Not audited.",
-          reasoning_steps: [
-            { step: 1, rule_id: "R006", description: "Unaudited or projected financial figures", matched_text: "not audited" },
-            { step: 2, rule_id: "R003", description: "Document self-flags for human review", matched_text: "Human review required" }
-          ]
-        },
-        {
-          finding_id: "F005",
-          fixture_path: "fake-invoice-redacted.txt",
-          pillar: "financials",
-          label: "needs_human",
-          agent_suggestion: "confirm_redaction",
-          rule_fired: "R002",
-          excerpt: "IBAN: NL** **** **** **** 42",
-          reasoning_steps: [
-            { step: 1, rule_id: "R002", description: "Partial bank account number visible", matched_text: "IBAN: NL**" }
-          ]
-        },
-        {
-          finding_id: "F006",
-          fixture_path: "cap-table-outline.md",
-          pillar: "legal",
-          label: "unclear",
-          agent_suggestion: "verify_cap_table",
-          rule_fired: "R005",
-          excerpt: "SAFE note mentioned in email thread — not reflected above",
-          reasoning_steps: [
-            { step: 1, rule_id: "R005", description: "Cap table or dilution signals need verification", matched_text: "SAFE" },
-            { step: 2, rule_id: "R004", description: "Ambiguous legal or binding language", matched_text: "Ambiguities" }
-          ]
-        }
-      ]
+    const NOTION_DECISIONS_URL = "https://app.notion.com/p/bb52cfa45b6744e59983528480fbab4b";
+
+    const I18N = {
+      en: {
+        title: "VertiGreen HITL Microworld",
+        subtitle: "Synthetic dataroom review · ~2–3 min · Not a production UI",
+        company: "VertiGreen Robotics",
+        timebox: "Timebox",
+        step: "Step",
+        of: "of",
+        start: "Start review",
+        next: "Next moment",
+        finish: "See results",
+        back: "Back",
+        yourCall: "Your call",
+        agentSays: "Agent suggestion",
+        reasoning: "Reasoning trace",
+        agree: "Agree with agent",
+        override: "Override agent",
+        defer: "Defer — need more context",
+        returnDb: "Return to Decisions DB",
+        returnDbHint: "Open the Notion Decisions database to record your rationale.",
+        completeTitle: "Microworld complete",
+        completeBody: "You practiced four VertiGreen decision moments. Carry your choices into the shared Notion Decisions DB.",
+        scoreLabel: "Aligned with best practice",
+        moments: "Moments reviewed",
+        introTitle: "Practice before the shared space",
+        introBody: "Step through four synthetic findings from the VertiGreen dataroom. Each moment takes under a minute — agree, override, or defer, then continue to Notion.",
+        introBullets: [
+          "IBAN partial redaction",
+          "Unaudited financial projections",
+          "Ambiguous SAFE / cap table",
+          "Hallucinated impact metric"
+        ],
+        momentLabels: ["IBAN redaction", "Unaudited financials", "SAFE / cap table", "Hallucinated metric"],
+        momentsData: [
+          {
+            id: "F005",
+            file: "fake-invoice-redacted.txt",
+            pillar: "financials",
+            label: "needs_human",
+            action: "confirm_redaction",
+            excerpt: "Vendor: AgriParts BV\nInvoice #VG-2026-0142\nIBAN: NL** **** **** **** 42\nAmount: €4,850.00",
+            agent: "Partial IBAN visible — confirm redaction before including in report.",
+            reasoning: [
+              "R002 — Partial bank account number visible",
+              "Matched: \"IBAN: NL**\""
+            ],
+            feedback: {
+              agree: "Good — partial IBANs need human confirmation before export.",
+              override: "Override noted — document why redaction is sufficient or insufficient.",
+              defer: "Reasonable if you need the full invoice context from counsel."
+            },
+            best: "agree"
+          },
+          {
+            id: "F004",
+            file: "financials-summary.md",
+            pillar: "financials",
+            label: "needs_human",
+            action: "verify_financials",
+            excerpt: "Financial Summary (Draft — Q1 2026)\nSynthetic fixture. Not audited.\nQ1 2026 MRR: €8,400 — projected run-rate",
+            agent: "Unaudited projections flagged — verify figures before scoring.",
+            reasoning: [
+              "R006 — Unaudited or projected financial figures",
+              "R003 — Document self-flags for human review"
+            ],
+            feedback: {
+              agree: "Correct — draft figures without audit trail stay needs_human.",
+              override: "Only override if you have audited source docs not in this fixture.",
+              defer: "Fine when waiting on management or auditor response."
+            },
+            best: "agree"
+          },
+          {
+            id: "F006",
+            file: "cap-table-outline.md",
+            pillar: "legal",
+            label: "unclear",
+            action: "verify_cap_table",
+            excerpt: "Founders: 68% combined\nSeed investors: 22%\nOption pool: 10%\n\nNote: SAFE note mentioned in email thread — not reflected above",
+            agent: "SAFE / dilution language is ambiguous — cap table needs verification.",
+            reasoning: [
+              "R005 — Cap table or dilution signals need verification",
+              "R004 — Ambiguous legal language (\"not reflected above\")"
+            ],
+            feedback: {
+              agree: "Right — unclear ownership / SAFE terms map to unclear, not auto_ok.",
+              override: "If you downgrade to auto_ok, record strong rationale in Notion.",
+              defer: "Sensible when external counsel is reviewing the SAFE."
+            },
+            best: "agree"
+          },
+          {
+            id: "F-HALL",
+            file: "agent-draft-excerpt.md",
+            pillar: "impact",
+            label: "needs_human",
+            action: "reject_hallucination",
+            excerpt: "Agent draft claim: \"VertiGreen delivers 42% water savings across all pilots.\"\n\nFixture source (esg-impact.md): \"34.8% median reduction\" (n=3 sites)",
+            agent: "Metric mismatch — agent rounded up beyond cited methodology. Reject hallucinated figure.",
+            reasoning: [
+              "R009 — Cited figure 34.8% ≠ agent claim 42%",
+              "No source supports universal \"all pilots\" language"
+            ],
+            feedback: {
+              agree: "Strong — reject ungrounded metrics before they reach investors.",
+              override: "Risky — overriding here may let a hallucination into the report.",
+              defer: "OK short-term; follow up with methodology doc v0.3."
+            },
+            best: "agree"
+          }
+        ]
+      },
+      es: {
+        title: "Micromundo HITL VertiGreen",
+        subtitle: "Revisión sintética del dataroom · ~2–3 min · No es UI de producción",
+        company: "VertiGreen Robotics",
+        timebox: "Tiempo",
+        step: "Paso",
+        of: "de",
+        start: "Iniciar revisión",
+        next: "Siguiente momento",
+        finish: "Ver resultados",
+        back: "Atrás",
+        yourCall: "Tu decisión",
+        agentSays: "Sugerencia del agente",
+        reasoning: "Traza de razonamiento",
+        agree: "De acuerdo con el agente",
+        override: "Anular al agente",
+        defer: "Aplazar — falta contexto",
+        returnDb: "Volver a Decisions DB",
+        returnDbHint: "Abre la base Decisions en Notion para registrar tu justificación.",
+        completeTitle: "Micromundo completado",
+        completeBody: "Practicaste cuatro momentos de decisión VertiGreen. Lleva tus elecciones al espacio compartido en Notion Decisions DB.",
+        scoreLabel: "Alineado con buenas prácticas",
+        moments: "Momentos revisados",
+        introTitle: "Practica antes del espacio compartido",
+        introBody: "Recorre cuatro hallazgos sintéticos del dataroom VertiGreen. Cada momento toma menos de un minuto — de acuerdo, anula o aplaza, luego continúa en Notion.",
+        introBullets: [
+          "Redacción parcial de IBAN",
+          "Proyecciones financieras no auditadas",
+          "SAFE / cap table ambiguo",
+          "Métrica de impacto alucinada"
+        ],
+        momentLabels: ["Redacción IBAN", "Finanzas no auditadas", "SAFE / cap table", "Métrica alucinada"],
+        momentsData: [
+          {
+            id: "F005",
+            file: "fake-invoice-redacted.txt",
+            pillar: "financials",
+            label: "needs_human",
+            action: "confirm_redaction",
+            excerpt: "Proveedor: AgriParts BV\nFactura #VG-2026-0142\nIBAN: NL** **** **** **** 42\nImporte: €4.850,00",
+            agent: "IBAN parcial visible — confirmar redacción antes de incluir en el informe.",
+            reasoning: [
+              "R002 — Número de cuenta bancaria parcial visible",
+              "Coincidencia: \"IBAN: NL**\""
+            ],
+            feedback: {
+              agree: "Bien — los IBAN parciales requieren confirmación humana antes de exportar.",
+              override: "Anulación registrada — documenta por qué la redacción es suficiente o no.",
+              defer: "Razonable si necesitas el contexto completo de la factura del asesor legal."
+            },
+            best: "agree"
+          },
+          {
+            id: "F004",
+            file: "financials-summary.md",
+            pillar: "financials",
+            label: "needs_human",
+            action: "verify_financials",
+            excerpt: "Resumen financiero (Borrador — Q1 2026)\nFixture sintético. No auditado.\nMRR Q1 2026: €8.400 — tasa proyectada",
+            agent: "Proyecciones no auditadas marcadas — verificar cifras antes de puntuar.",
+            reasoning: [
+              "R006 — Cifras financieras no auditadas o proyectadas",
+              "R003 — El documento solicita revisión humana"
+            ],
+            feedback: {
+              agree: "Correcto — cifras borrador sin auditoría permanecen en needs_human.",
+              override: "Solo anula si tienes documentos auditados fuera de este fixture.",
+              defer: "Válido mientras esperas respuesta de dirección o auditor."
+            },
+            best: "agree"
+          },
+          {
+            id: "F006",
+            file: "cap-table-outline.md",
+            pillar: "legal",
+            label: "unclear",
+            action: "verify_cap_table",
+            excerpt: "Fundadores: 68% combinado\nInversores seed: 22%\nPool de opciones: 10%\n\nNota: SAFE mencionado en correo — no reflejado arriba",
+            agent: "Lenguaje SAFE / dilución ambiguo — verificar cap table.",
+            reasoning: [
+              "R005 — Señales de cap table o dilución requieren verificación",
+              "R004 — Lenguaje legal ambiguo (\"no reflejado arriba\")"
+            ],
+            feedback: {
+              agree: "Correcto — propiedad / SAFE ambiguos → unclear, no auto_ok.",
+              override: "Si bajas a auto_ok, registra justificación sólida en Notion.",
+              defer: "Sensato cuando asesoría externa revisa el SAFE."
+            },
+            best: "agree"
+          },
+          {
+            id: "F-HALL",
+            file: "agent-draft-excerpt.md",
+            pillar: "impact",
+            label: "needs_human",
+            action: "reject_hallucination",
+            excerpt: "Afirmación del borrador del agente: \"VertiGreen logra 42% de ahorro de agua en todos los pilotos.\"\n\nFuente del fixture (esg-impact.md): \"34,8% de reducción mediana\" (n=3 sitios)",
+            agent: "Discrepancia de métrica — el agente excedió la metodología citada. Rechazar cifra alucinada.",
+            reasoning: [
+              "R009 — Cifra citada 34,8% ≠ afirmación del agente 42%",
+              "Ninguna fuente respalda \"todos los pilotos\""
+            ],
+            feedback: {
+              agree: "Fuerte — rechaza métricas sin fundamento antes de llegar a inversores.",
+              override: "Arriesgado — anular aquí puede dejar pasar una alucinación al informe.",
+              defer: "OK a corto plazo; pedir doc. de metodología v0.3."
+            },
+            best: "agree"
+          }
+        ]
+      }
     };
 
-    let data = SAMPLE;
-    let selectedId = null;
-    let stepIndex = 0;
+    let lang = "en";
+    let screen = "intro";
+    let momentIndex = 0;
+    let choices = [];
+    let startTime = null;
 
-    const findingList = document.getElementById("findingList");
-    const detail = document.getElementById("detail");
-    const fileInput = document.getElementById("fileInput");
+    const app = document.getElementById("app");
+    const progressFill = document.getElementById("progressFill");
+    const metaRow = document.getElementById("metaRow");
+    const titleEl = document.getElementById("title");
+    const subtitleEl = document.getElementById("subtitle");
 
-    fileInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      try {
-        const json = JSON.parse(await file.text());
-        if (!json.findings) throw new Error("Missing findings array");
-        data = json;
-        selectedId = null;
-        renderList();
-        detail.innerHTML = `<p style="color: var(--accent)">Loaded ${file.name} — ${json.findings.length} findings.</p>`;
-      } catch (err) {
-        alert("Invalid findings.json: " + err.message);
-      }
-    });
+    function t() { return I18N[lang]; }
 
-    function renderList() {
-      findingList.innerHTML = data.findings.map((f) => `
-        <button class="finding-item ${f.finding_id === selectedId ? "active" : ""}" data-id="${f.finding_id}">
-          ${f.finding_id}<span class="badge ${f.label}">${f.label}</span>
-          <div style="color: var(--muted); margin-top: 0.2rem; font-size: 0.72rem;">${f.fixture_path}</div>
-        </button>
-      `).join("");
-      findingList.querySelectorAll(".finding-item").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          selectedId = btn.dataset.id;
-          stepIndex = 0;
-          renderList();
-          renderDetail();
-        });
-      });
+    function setLang(next) {
+      lang = next;
+      document.documentElement.lang = next;
+      document.getElementById("langEn").classList.toggle("active", next === "en");
+      document.getElementById("langEs").classList.toggle("active", next === "es");
+      document.getElementById("langEn").setAttribute("aria-pressed", next === "en");
+      document.getElementById("langEs").setAttribute("aria-pressed", next === "es");
+      titleEl.textContent = t().title;
+      subtitleEl.textContent = t().subtitle;
+      render();
     }
 
-    function renderDetail() {
-      const f = data.findings.find((x) => x.finding_id === selectedId);
-      if (!f) return;
-      const steps = f.reasoning_steps || [];
-      const step = steps[stepIndex] || { description: "No steps." };
+    document.getElementById("langEn").onclick = () => setLang("en");
+    document.getElementById("langEs").onclick = () => setLang("es");
 
-      detail.innerHTML = `
-        <h2 style="margin: 0 0 1rem; font-size: 1rem;">${f.finding_id} — ${f.fixture_path}</h2>
-        <div class="meta-grid">
-          <div class="meta-card"><label>File</label><span>${f.fixture_path}</span></div>
-          <div class="meta-card"><label>Pillar</label><span>${f.pillar || "—"}</span></div>
-          <div class="meta-card"><label>Rule fired</label><span>${f.rule_fired}</span></div>
-          <div class="meta-card"><label>Label</label><span class="badge ${f.label}">${f.label}</span></div>
-          <div class="meta-card"><label>Suggested action</label><span>${f.agent_suggestion}</span></div>
-        </div>
-        <p style="font-size: 0.85rem; color: var(--muted);">${f.excerpt || ""}</p>
-        <div class="scrubber">
-          <strong>Reasoning scrubber</strong>
-          <div class="step-display">
-            <div><strong>${step.rule_id || "—"}</strong> — ${step.description}</div>
-            ${step.matched_text ? `<div style="margin-top: 0.5rem; color: var(--warn);">Matched: "${step.matched_text}"</div>` : ""}
-          </div>
-          <div class="controls">
-            <button id="prevBtn" ${stepIndex === 0 ? "disabled" : ""}>← Prev</button>
-            <button id="nextBtn" ${stepIndex >= steps.length - 1 ? "disabled" : ""}>Next →</button>
-            <span class="progress">Step ${stepIndex + 1} / ${steps.length}</span>
+    function elapsed() {
+      if (!startTime) return "0:00";
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return m + ":" + String(r).padStart(2, "0");
+    }
+
+    function progressPct() {
+      if (screen === "intro") return 0;
+      if (screen === "complete") return 100;
+      return Math.round(((momentIndex + 1) / (t().momentsData.length + 1)) * 100);
+    }
+
+    function renderMeta() {
+      const total = t().momentsData.length;
+      metaRow.innerHTML = `
+        <span class="pill">${t().company}</span>
+        <span class="pill timer">${t().timebox}: ${elapsed()}</span>
+        ${screen === "moment" ? `<span class="pill">${t().step} ${momentIndex + 1} ${t().of} ${total}</span>` : ""}
+      `;
+    }
+
+    function renderIntro() {
+      const bullets = t().introBullets.map((b) => `<li>${b}</li>`).join("");
+      app.innerHTML = `
+        <div class="card">
+          <h2>${t().introTitle}</h2>
+          <p>${t().introBody}</p>
+          <ul style="margin: 0.75rem 0 0; padding-left: 1.2rem; color: var(--muted); font-size: 0.88rem;">
+            ${bullets}
+          </ul>
+          <div class="nav-row" style="margin-top: 1.25rem;">
+            <span></span>
+            <button type="button" class="btn primary" id="startBtn">${t().start}</button>
           </div>
         </div>
       `;
-      document.getElementById("prevBtn").onclick = () => { stepIndex--; renderDetail(); };
-      document.getElementById("nextBtn").onclick = () => { stepIndex++; renderDetail(); };
+      document.getElementById("startBtn").onclick = () => {
+        startTime = Date.now();
+        screen = "moment";
+        momentIndex = 0;
+        choices = [];
+        render();
+      };
     }
 
-    renderList();
+    function renderMoment() {
+      const m = t().momentsData[momentIndex];
+      const choice = choices[momentIndex];
+      const fb = choice ? m.feedback[choice] : "";
+      const fbClass = choice === m.best ? "good" : choice === "defer" ? "neutral" : choice ? "ok" : "";
+
+      app.innerHTML = `
+        <div class="card">
+          <h2>${t().momentLabels[momentIndex]} <span class="badge ${m.label}">${m.label}</span></h2>
+          <p style="margin: 0; font-size: 0.82rem; color: var(--muted);">${m.id} · ${m.file} · ${m.pillar}</p>
+
+          <h3>${t().agentSays}</h3>
+          <div class="agent-box">${m.agent}</div>
+
+          <div class="excerpt">${m.excerpt}</div>
+
+          <h3>${t().reasoning}</h3>
+          <ul class="reasoning">${m.reasoning.map((r) => `<li>${r}</li>`).join("")}</ul>
+
+          <h3>${t().yourCall}</h3>
+          <div class="choices">
+            <button type="button" class="choice-btn ${choice === "agree" ? "selected" : ""}" data-choice="agree">
+              <span class="key">A</span><span>${t().agree}</span>
+            </button>
+            <button type="button" class="choice-btn ${choice === "override" ? "selected" : ""}" data-choice="override">
+              <span class="key">O</span><span>${t().override}</span>
+            </button>
+            <button type="button" class="choice-btn ${choice === "defer" ? "selected" : ""}" data-choice="defer">
+              <span class="key">D</span><span>${t().defer}</span>
+            </button>
+          </div>
+
+          <div class="feedback ${fbClass} ${choice ? "show" : ""}" id="feedback">${fb}</div>
+
+          <div class="nav-row">
+            <button type="button" class="btn" id="backBtn" ${momentIndex === 0 ? "disabled" : ""}>${t().back}</button>
+            <button type="button" class="btn primary" id="nextBtn" ${choice ? "" : "disabled"}>
+              ${momentIndex < t().momentsData.length - 1 ? t().next : t().finish}
+            </button>
+          </div>
+        </div>
+      `;
+
+      app.querySelectorAll("[data-choice]").forEach((btn) => {
+        btn.onclick = () => {
+          choices[momentIndex] = btn.dataset.choice;
+          renderMoment();
+        };
+      });
+
+      const backBtn = document.getElementById("backBtn");
+      if (backBtn && !backBtn.disabled) {
+        backBtn.onclick = () => { momentIndex--; render(); };
+      }
+
+      document.getElementById("nextBtn").onclick = () => {
+        if (momentIndex < t().momentsData.length - 1) {
+          momentIndex++;
+          render();
+        } else {
+          screen = "complete";
+          render();
+        }
+      };
+    }
+
+    function renderComplete() {
+      const data = t().momentsData;
+      const aligned = choices.filter((c, i) => c === data[i].best).length;
+      const pct = Math.round((aligned / data.length) * 100);
+
+      const rows = data.map((m, i) => {
+        const c = choices[i] || "—";
+        const ok = c === m.best;
+        return `<div class="summary-row">
+          <span>${t().momentLabels[i]} (${m.id})</span>
+          <span class="badge ${ok ? "auto_ok" : c === "override" ? "override" : "unclear"}">${c}</span>
+        </div>`;
+      }).join("");
+
+      app.innerHTML = `
+        <div class="card" style="text-align: center;">
+          <div class="score-ring">${pct}%</div>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--muted);">${t().scoreLabel}</p>
+          <h2 style="margin-top: 1.25rem;">${t().completeTitle}</h2>
+          <p>${t().completeBody}</p>
+        </div>
+        <div class="card">
+          <h3 style="margin-top: 0;">${t().moments}</h3>
+          <div class="summary-grid">${rows}</div>
+          <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem;">${t().returnDbHint}</p>
+          <div class="nav-row" style="justify-content: center;">
+            <a class="btn link-btn primary" href="${NOTION_DECISIONS_URL}" target="_blank" rel="noopener noreferrer">
+              ${t().returnDb} →
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      progressFill.style.width = progressPct() + "%";
+      renderMeta();
+      if (screen === "intro") renderIntro();
+      else if (screen === "moment") renderMoment();
+      else renderComplete();
+    }
+
+    if (screen !== "intro" && startTime) {
+      setInterval(() => { renderMeta(); }, 1000);
+    }
+
+    render();
+    setInterval(() => {
+      if (startTime && screen !== "intro") renderMeta();
+    }, 1000);
   </script>
 </body>
 </html>

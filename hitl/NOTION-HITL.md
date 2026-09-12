@@ -41,6 +41,22 @@ No live Notion write is required for v1 — import `out/notion/decisions.csv` or
 - `waived` — quiz or review explicitly waived (audit trail in Rationale)
 - `blocked` — cannot proceed (e.g. missing fixture)
 
+## 5-beat lab flow (timeboxed)
+
+Full HITL gate target: **≤ 10 minutes** end-to-end. The microworld alone is **~2–3 minutes**.
+
+| Beat | Pillar | Artifact | Timebox |
+|------|--------|----------|---------|
+| 1 | Scan | `make hitl-demo` → `out/findings.json` | ~1 min |
+| 2 | Explanations | `out/notion/explainer.md` (background + intuition) | ~3 min |
+| 3 | **Micro worlds** | `hitl/microworld/index.html` — VertiGreen decision moments | **~2–3 min** |
+| 4 | Shared spaces | Notion **Decisions DB** — agree / override / defer + rationale | ~3 min |
+| 5 | Gate | Quiz passed or waived → **Approved** | ~1 min |
+
+**Placement:** Beat 3 (microworld) sits **between Explainer and Decisions** — reviewers practice four synthetic VertiGreen calls (IBAN redaction, unaudited financials, ambiguous SAFE/cap table, hallucinated metric reject) before recording decisions in Notion.
+
+**Major-PR-only gate:** The full 5-beat gate (quiz + Decisions DB sign-off) applies to **major PRs** that change scanner rules, fixture expectations, or HITL workflow artifacts. Routine doc-only or minor fixes may skip the Notion gate; record any skip in PR description.
+
 ## Workflow
 
 ```mermaid
@@ -48,12 +64,12 @@ flowchart LR
   A[make hitl-demo] --> B[out/findings.json]
   A --> C[out/notion/explainer.md]
   A --> D[out/notion/decisions.csv]
-  B --> E[Microworld scrubber]
-  C --> F[Reviewer reads + quiz]
-  D --> G[Import to Notion Decisions DB]
-  F --> G
-  E --> G
-  G --> H{Quiz passed or waived?}
+  C --> E[Beat 2: Explainer]
+  E --> F[Beat 3: Microworld]
+  F --> G[Beat 4: Decisions DB]
+  B --> G
+  D --> G
+  G --> H{Beat 5: Quiz passed or waived?}
   H -->|yes| I[Run Approved]
   H -->|no| J[Run Blocked]
 ```
@@ -84,7 +100,7 @@ flowchart LR
 | Artifact | Litt pillar | Path |
 |----------|-------------|------|
 | Explainer + quiz | Explanations | `out/notion/explainer.md` |
-| Finding scrubber | Micro worlds | `hitl/microworld/index.html` |
+| VertiGreen microworld (EN/ES, 4 moments) | Micro worlds | `hitl/microworld/index.html` |
 | Decisions DB | Shared spaces | `out/notion/decisions.csv` |
 
 ## Gate note
