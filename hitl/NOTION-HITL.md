@@ -2,6 +2,17 @@
 
 This document defines the **Shared space** for Dataroom Reviewer human-in-the-loop workflows, inspired by Geoffrey Litt's *Explanations / Micro worlds / Shared spaces* framing ([talk](https://www.youtube.com/watch?v=WkBPX-oDMnA)).
 
+## Production review vs training microworld
+
+| Surface | Path | Data | Purpose |
+|---------|------|------|---------|
+| **Production reviewer** | `/review/<job_id>` (Flask) | Real scan scoring JSON → `findings.json` (`S001…`) | Lock agree/override/defer on live or dry-run scans |
+| **Training microworld** | `hitl/microworld/index.html` | VertiGreen fixtures (`F001…`) + quiz gate | ≤10 min training loop before Notion |
+
+Both export locks compatible with `microworld-locks.schema.json` v1 (`fixture_path` ← `source_path` for production). **Notion push stays env-token only** — `scripts/push_microworld_to_notion.py` on Infra/Hands; never embed tokens in HTML/JS.
+
+Production v1: locks autosave to `output/{job_id}-review-locks.json` on every lock; localStorage is recovery cache only. Optional Notion push after Playground choose. Upload may already have completed — decisions are audit trail until a future HITL gate blocks PDF/upload.
+
 ## Purpose
 
 The Decisions database is the multiplayer surface where:

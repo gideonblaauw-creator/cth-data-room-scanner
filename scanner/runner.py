@@ -21,6 +21,7 @@ from typing import Any
 
 from scanner.config import DRIVE_REPORTS_FOLDER_ID, ensure_output_dir
 from scanner.crawl import crawl_folder, extract_folder_id
+from scanner.findings_from_score import findings_from_score, save_findings, findings_output_path
 from scanner.pdf import convert as pdf_convert
 from scanner.render import render_report, save_html, slugify
 from scanner.score_runner import load_becaps_fixture, score_data_room
@@ -49,6 +50,7 @@ class ScanResult:
     recommendation: str
     html_path: str
     pdf_path: str | None
+    findings_path: str | None = None
     drive_folder_url: str | None = None
     errors: list[str] = field(default_factory=list)
 
@@ -110,6 +112,30 @@ def run_scan(req: ScanRequest) -> ScanResult:
             context_notes=req.context_notes,
         )
 
+    # Step 3b — Review findings (before render/upload; audit path independent of upload)
+    source = "dry_run" if req.dry_run else "live_scan"
+    run_id = f"{slug}-{scan_date}"
+    findings_doc = findings_from_score(
+        scoring,
+        source=source,
+        run_id=run_id,
+        tree=tree,
+    )
+    findings_path = None
+    try:
+        from scanner.findings_from_score import findings_output_path
+
+        fp = findings_output_path(slug, scan_date, output_dir)
+        findings_path = save_findings(findings_doc, fp)
+        logger.info(
+            "runner: wrote %d findings → %s",
+            len(findings_doc["findings"]),
+            findings_path,
+        )
+    except Exception as exc:
+        errors.append(f"Findings export failed: {exc}")
+        logger.exception("runner: findings export failed")
+
     # Step 4 — Render HTML
     logger.info("runner: rendering HTML report")
     html = render_report(scoring, lang=req.lang)
@@ -146,6 +172,7 @@ def run_scan(req: ScanRequest) -> ScanResult:
         recommendation=overall.get("recommendation", "unknown"),
         html_path=html_path,
         pdf_path=pdf_path,
+        findings_path=findings_path,
         drive_folder_url=drive_url,
         errors=errors,
     )

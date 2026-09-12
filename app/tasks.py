@@ -31,10 +31,12 @@ def run_scan_job(
         "summary": result.summary(),
         "company_name": result.company_name,
         "slug": result.slug,
+        "scan_date": result.scan_date,
         "overall_score": result.overall_score,
         "recommendation": result.recommendation,
         "html_path": result.html_path,
         "pdf_path": result.pdf_path,
+        "findings_path": result.findings_path,
         "drive_folder_url": result.drive_folder_url,
         "errors": result.errors,
     }

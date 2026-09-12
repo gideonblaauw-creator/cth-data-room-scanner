@@ -1,0 +1,384 @@
+"""Unit tests for score → findings adapter and production review routes."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from scanner.findings_from_score import (
+    findings_from_score,
+    load_findings,
+    normalize_findings_doc,
+    save_findings,
+)
+from scanner.score_runner import load_becaps_fixture
+
+BECAPS_FIXTURE = ROOT / "fixtures" / "becaps_scoring.json"
+FIXTURE_FINDINGS = ROOT / "hitl" / "microworld" / "defaults" / "findings-hitl-20260908-214515.json"
+LOCKS_SCHEMA = ROOT / "hitl" / "microworld" / "schema" / "microworld-locks.schema.json"
+
+
+class TestFindingsFromScore:
+    def test_becaps_produces_findings_with_labels(self):
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="dry_run", run_id="test-run")
+
+        assert doc["run_id"] == "test-run"
+        assert doc["source"] == "dry_run"
+        assert doc["company"] == "BeCaps"
+        assert len(doc["findings"]) >= 10
+
+        labels = {f["label"] for f in doc["findings"]}
+        assert "needs_human" in labels or "unclear" in labels
+
+        for f in doc["findings"]:
+            assert f["finding_id"].startswith("S")
+            assert f["source_path"]
+            assert f["pillar"]
+            assert f["rule_fired"]
+            assert f["agent_suggestion"]
+            assert len(f["reasoning_steps"]) >= 1
+
+    def test_eligibility_warn_becomes_finding(self):
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="dry_run")
+        eligibility = [f for f in doc["findings"] if f["pillar"] == "eligibility"]
+        assert len(eligibility) >= 1
+        assert eligibility[0]["rule_fired"] == "eligibility_warn"
+        assert eligibility[0]["label"] == "unclear"
+
+    def test_stable_sequential_ids(self):
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="dry_run")
+        ids = [f["finding_id"] for f in doc["findings"]]
+        assert ids[0] == "S001"
+        assert ids == [f"S{i:03d}" for i in range(1, len(ids) + 1)]
+
+    def test_save_and_load_round_trip(self, tmp_path):
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="live_scan", run_id="round-trip")
+        path = tmp_path / "test.findings.json"
+        save_findings(doc, path)
+        loaded = load_findings(path)
+        assert loaded["run_id"] == "round-trip"
+        assert len(loaded["findings"]) == len(doc["findings"])
+
+
+class TestNormalizeFindings:
+    def test_fixture_microworld_shape(self):
+        raw = json.loads(FIXTURE_FINDINGS.read_text())
+        doc = normalize_findings_doc(raw)
+        assert len(doc["findings"]) >= 5
+        for f in doc["findings"]:
+            assert "source_path" in f
+            assert f["finding_id"].startswith("F")
+
+    def test_gate_findings_alias(self):
+        raw = {"run_id": "x", "company": "Co", "gate_findings": [
+            {"finding_id": "F001", "fixture_path": "a.md", "label": "auto_ok",
+             "agent_suggestion": "ok", "rule_fired": "R001", "excerpt": "x"}
+        ]}
+        doc = normalize_findings_doc(raw)
+        assert doc["findings"][0]["source_path"] == "a.md"
+
+
+class TestReviewLocksRoundTrip:
+    def _sample_production_locks(self, findings_doc: dict) -> dict:
+        locks = []
+        for f in findings_doc["findings"][:3]:
+            locks.append({
+                "finding_id": f["finding_id"],
+                "fixture_path": f["source_path"],
+                "agent_suggestion": f["agent_suggestion"],
+                "agent_label": f["label"],
+                "human_decision": "agree",
+                "rationale": "Confirmed after diligence review.",
+                "status": "reviewed",
+                "locked_at": "2026-09-12T14:00:00+00:00",
+            })
+        return {
+            "version": 1,
+            "run_id": findings_doc["run_id"],
+            "company": findings_doc["company"],
+            "quiz_passed": True,
+            "locked_at": "2026-09-12T14:00:00+00:00",
+            "locks": locks,
+        }
+
+    def test_locks_compatible_with_microworld_schema_fields(self):
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="dry_run")
+        locks = self._sample_production_locks(doc)
+        schema = json.loads(LOCKS_SCHEMA.read_text())
+        required_top = schema["required"]
+        for key in required_top:
+            if key == "quiz_passed":
+                assert isinstance(locks[key], bool)
+            else:
+                assert key in locks
+        lock_def = schema["$defs"]["lock"]["required"]
+        for lock in locks["locks"]:
+            for key in lock_def:
+                assert key in lock
+            assert lock["human_decision"] in {"agree", "override", "defer"}
+            assert len(lock["rationale"]) >= 8
+
+    def test_s_prefixed_finding_ids_in_locks(self):
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="dry_run")
+        locks = self._sample_production_locks(doc)
+        for lock in locks["locks"]:
+            assert lock["finding_id"].startswith("S")
+
+
+class TestReviewFlaskRoutes:
+    @pytest.fixture
+    def client(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        import scanner.config as cfg
+        import app.review as review_mod
+
+        monkeypatch.setattr(cfg, "OUTPUT_DIR", tmp_path)
+        monkeypatch.setattr(review_mod, "OUTPUT_DIR", tmp_path)
+        from app.main import app
+
+        app.config["TESTING"] = True
+        return app.test_client()
+
+    def test_review_page_serves_html(self, client):
+        res = client.get("/review/demo")
+        assert res.status_code == 200
+        assert b"CTH Production Reviewer" in res.data
+
+    def test_api_findings_becaps_alias(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        res = client.get("/api/review/becaps/findings")
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["company"]
+        assert len(data["findings"]) >= 1
+
+    def test_becaps_locks_get_post_without_path(self, client, tmp_path, monkeypatch):
+        """Demo alias must resolve for locks GET/POST, not only findings GET."""
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        findings_res = client.get("/api/review/becaps/findings")
+        assert findings_res.status_code == 200
+        findings = findings_res.get_json()
+
+        get_res = client.get("/api/review/becaps/locks")
+        assert get_res.status_code == 200
+        assert "locks" in get_res.get_json() or get_res.get_json().get("version") is None
+
+        locks = {
+            "version": 1,
+            "run_id": findings["run_id"],
+            "company": findings["company"],
+            "quiz_passed": True,
+            "locked_at": "2026-09-12T14:00:00+00:00",
+            "locks": [{
+                "finding_id": findings["findings"][0]["finding_id"],
+                "fixture_path": findings["findings"][0]["source_path"],
+                "agent_suggestion": findings["findings"][0]["agent_suggestion"],
+                "agent_label": findings["findings"][0]["label"],
+                "human_decision": "agree",
+                "rationale": "Reviewed and confirmed for audit trail.",
+                "status": "reviewed",
+                "locked_at": "2026-09-12T14:00:01+00:00",
+            }],
+        }
+        post_res = client.post(
+            "/api/review/becaps/locks",
+            json=locks,
+            content_type="application/json",
+        )
+        assert post_res.status_code == 200, post_res.get_json()
+        assert post_res.get_json()["ok"] is True
+
+        get_res2 = client.get("/api/review/becaps/locks")
+        assert get_res2.status_code == 200
+        saved = get_res2.get_json()
+        assert saved["version"] == 1
+        assert len(saved["locks"]) == 1
+        assert saved["path"].endswith("becaps-review-locks.json")
+
+    def test_locks_path_is_job_based(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        client.get("/api/review/becaps/findings")
+        get_res = client.get("/api/review/becaps/locks")
+        assert get_res.status_code == 200
+        assert get_res.get_json()["path"] == str(tmp_path / "becaps-review-locks.json")
+
+    def test_autosave_incremental_locks(self, client, tmp_path, monkeypatch):
+        """Simulate autosave after each lock — second POST replaces with more locks."""
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        findings = client.get("/api/review/becaps/findings").get_json()
+        f0, f1 = findings["findings"][0], findings["findings"][1]
+
+        def post_one(finding):
+            return client.post(
+                "/api/review/becaps/locks",
+                json={
+                    "version": 1,
+                    "run_id": findings["run_id"],
+                    "company": findings["company"],
+                    "quiz_passed": True,
+                    "locked_at": "2026-09-12T14:00:00+00:00",
+                    "locks": [{
+                        "finding_id": finding["finding_id"],
+                        "fixture_path": finding["source_path"],
+                        "agent_suggestion": finding["agent_suggestion"],
+                        "agent_label": finding["label"],
+                        "human_decision": "agree",
+                        "rationale": "Autosaved after lock decision.",
+                        "status": "reviewed",
+                        "locked_at": "2026-09-12T14:00:01+00:00",
+                    }],
+                },
+                content_type="application/json",
+            )
+
+        assert post_one(f0).status_code == 200
+        assert post_one(f1).status_code == 200
+
+        saved = client.get("/api/review/becaps/locks").get_json()
+        assert len(saved["locks"]) == 1  # last POST replaces full doc — UI sends all locks
+
+        both = client.post(
+            "/api/review/becaps/locks",
+            json={
+                "version": 1,
+                "run_id": findings["run_id"],
+                "company": findings["company"],
+                "quiz_passed": True,
+                "locked_at": "2026-09-12T14:00:00+00:00",
+                "locks": [
+                    {
+                        "finding_id": f0["finding_id"],
+                        "fixture_path": f0["source_path"],
+                        "agent_suggestion": f0["agent_suggestion"],
+                        "agent_label": f0["label"],
+                        "human_decision": "agree",
+                        "rationale": "First finding locked and autosaved.",
+                        "status": "reviewed",
+                        "locked_at": "2026-09-12T14:00:01+00:00",
+                    },
+                    {
+                        "finding_id": f1["finding_id"],
+                        "fixture_path": f1["source_path"],
+                        "agent_suggestion": f1["agent_suggestion"],
+                        "agent_label": f1["label"],
+                        "human_decision": "defer",
+                        "rationale": "Second finding deferred pending counsel.",
+                        "status": "reviewed",
+                        "locked_at": "2026-09-12T14:00:02+00:00",
+                    },
+                ],
+            },
+            content_type="application/json",
+        )
+        assert both.status_code == 200
+        saved2 = client.get("/api/review/becaps/locks").get_json()
+        assert len(saved2["locks"]) == 2
+        assert (tmp_path / "becaps-review-locks.json").exists()
+
+    def test_merge_endpoint_prefers_newer_server(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        findings = client.get("/api/review/becaps/findings").get_json()
+        f0 = findings["findings"][0]
+
+        client.post(
+            "/api/review/becaps/locks",
+            json={
+                "version": 1,
+                "run_id": findings["run_id"],
+                "company": findings["company"],
+                "quiz_passed": True,
+                "locked_at": "2026-09-12T14:00:00+00:00",
+                "locks": [{
+                    "finding_id": f0["finding_id"],
+                    "fixture_path": f0["source_path"],
+                    "agent_suggestion": f0["agent_suggestion"],
+                    "agent_label": f0["label"],
+                    "human_decision": "agree",
+                    "rationale": "Server-side autosaved decision record.",
+                    "status": "reviewed",
+                    "locked_at": "2026-09-12T15:00:00+00:00",
+                }],
+            },
+            content_type="application/json",
+        )
+
+        merge_res = client.post(
+            "/api/review/becaps/locks/merge",
+            json={
+                "run_id": findings["run_id"],
+                "company": findings["company"],
+                "locks": [{
+                    "finding_id": f0["finding_id"],
+                    "fixture_path": f0["source_path"],
+                    "agent_suggestion": f0["agent_suggestion"],
+                    "agent_label": f0["label"],
+                    "human_decision": "override",
+                    "rationale": "Stale local override should lose to server.",
+                    "status": "reviewed",
+                    "locked_at": "2026-09-12T14:00:00+00:00",
+                }],
+            },
+            content_type="application/json",
+        )
+        assert merge_res.status_code == 200
+        data = merge_res.get_json()
+        assert data["locks"][0]["human_decision"] == "agree"
+        assert data["lock_count"] == 1
+
+    def test_path_traversal_rejected(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        client.get("/api/review/becaps/findings")
+        for bad_path in ("../../../etc/passwd", "/etc/passwd", "..\\..\\etc\\passwd"):
+            res = client.get(f"/api/review/becaps/findings?path={bad_path}")
+            assert res.status_code == 404
+
+    def test_api_save_locks_with_explicit_path(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        client.get("/api/review/becaps/findings")
+        scoring = load_becaps_fixture()
+        doc = findings_from_score(scoring, source="dry_run", run_id="becaps-demo")
+        scan_date = scoring["company"]["scan_date"]
+        path = tmp_path / f"becaps-demo-{scan_date[:7]}.findings.json"
+        save_findings(doc, path)
+
+        locks = {
+            "version": 1,
+            "run_id": doc["run_id"],
+            "company": doc["company"],
+            "quiz_passed": True,
+            "locked_at": "2026-09-12T14:00:00+00:00",
+            "locks": [{
+                "finding_id": doc["findings"][0]["finding_id"],
+                "fixture_path": doc["findings"][0]["source_path"],
+                "agent_suggestion": doc["findings"][0]["agent_suggestion"],
+                "agent_label": doc["findings"][0]["label"],
+                "human_decision": "agree",
+                "rationale": "Reviewed and confirmed for audit trail.",
+                "status": "reviewed",
+                "locked_at": "2026-09-12T14:00:01+00:00",
+            }],
+        }
+        rel = path.name
+        res = client.post(
+            f"/api/review/becaps/locks?path={rel}",
+            json=locks,
+            content_type="application/json",
+        )
+        assert res.status_code == 200
+        assert res.get_json()["ok"] is True
+
+    def test_health_still_works(self, client):
+        res = client.get("/health")
+        assert res.status_code == 200
