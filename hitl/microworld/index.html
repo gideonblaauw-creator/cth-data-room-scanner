@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HITL Finding Scrubber — VertiGreen Microworld</title>
+  <title>HITL Microworld — VertiGreen Decision Lock-in</title>
   <style>
     :root {
       --bg: #0f1419;
       --surface: #1a2332;
+      --surface2: #243044;
       --border: #2d3a4f;
       --text: #e6edf3;
       --muted: #8b9cb3;
@@ -15,6 +16,7 @@
       --warn: #d29922;
       --danger: #f85149;
       --unclear: #a371f7;
+      --locked: #58a6ff;
     }
     * { box-sizing: border-box; }
     body {
@@ -26,21 +28,44 @@
       min-height: 100vh;
     }
     header {
-      padding: 1.25rem 1.5rem;
+      padding: 1rem 1.5rem;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: flex-start;
+      justify-content: space-between;
     }
-    header h1 { margin: 0 0 0.25rem; font-size: 1.1rem; font-weight: 600; }
-    header p { margin: 0; color: var(--muted); font-size: 0.85rem; }
-    main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 80px); }
+    header h1 { margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 600; }
+    header p { margin: 0; color: var(--muted); font-size: 0.82rem; }
+    .header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .banner {
+      background: rgba(210, 153, 34, 0.15);
+      border: 1px solid var(--warn);
+      color: var(--warn);
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+    }
+    .banner.hidden { display: none; }
+    main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 120px); }
     aside {
       border-right: 1px solid var(--border);
       padding: 1rem;
       overflow-y: auto;
     }
-    .panel {
-      padding: 1.25rem 1.5rem;
-      overflow-y: auto;
+    .panel { padding: 1.25rem 1.5rem; overflow-y: auto; }
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      margin: 0.75rem 0 1rem;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.25s ease;
     }
     .finding-item {
       display: block;
@@ -53,57 +78,95 @@
       background: transparent;
       color: var(--text);
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
     }
     .finding-item:hover, .finding-item.active {
       border-color: var(--accent);
       background: rgba(63, 185, 80, 0.08);
     }
+    .finding-item.locked { border-left: 3px solid var(--locked); }
+    .finding-item.decided { border-left: 3px solid var(--warn); }
     .badge {
       display: inline-block;
-      font-size: 0.65rem;
-      padding: 0.1rem 0.4rem;
+      font-size: 0.62rem;
+      padding: 0.1rem 0.35rem;
       border-radius: 4px;
-      margin-left: 0.35rem;
+      margin-left: 0.25rem;
       text-transform: uppercase;
     }
     .badge.auto_ok { background: rgba(63,185,80,0.2); color: var(--accent); }
     .badge.needs_human { background: rgba(248,81,73,0.2); color: var(--danger); }
     .badge.unclear { background: rgba(163,113,247,0.2); color: var(--unclear); }
+    .state-badge {
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      display: block;
+    }
     .meta-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.65rem;
+      margin-bottom: 1rem;
     }
     .meta-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 0.75rem 1rem;
+      padding: 0.65rem 0.85rem;
     }
-    .meta-card label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.2rem; }
-    .meta-card span { font-size: 0.9rem; word-break: break-all; }
+    .meta-card label { display: block; font-size: 0.68rem; color: var(--muted); margin-bottom: 0.15rem; }
     .scrubber {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin-top: 1rem;
+      padding: 1rem;
+      margin: 1rem 0;
     }
     .step-display {
-      min-height: 4rem;
-      padding: 1rem;
+      min-height: 3.5rem;
+      padding: 0.85rem;
       background: var(--bg);
       border-radius: 6px;
-      margin: 0.75rem 0;
-      font-size: 0.9rem;
+      margin: 0.65rem 0;
+      font-size: 0.85rem;
     }
-    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .decision-panel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .decision-panel.locked-panel { border-color: var(--locked); opacity: 0.95; }
+    .decision-options { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0; }
+    .decision-options label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .decision-options input { accent-color: var(--accent); }
+    textarea {
+      width: 100%;
+      min-height: 4rem;
+      font-family: inherit;
+      font-size: 0.82rem;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem;
+      resize: vertical;
+    }
     button, .file-btn {
       font-family: inherit;
-      font-size: 0.8rem;
-      padding: 0.45rem 0.85rem;
+      font-size: 0.78rem;
+      padding: 0.45rem 0.8rem;
       border-radius: 6px;
       border: 1px solid var(--border);
       background: var(--surface);
@@ -112,120 +175,302 @@
     }
     button:hover, .file-btn:hover { border-color: var(--accent); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .progress { color: var(--muted); font-size: 0.8rem; }
+    button.primary { background: rgba(63,185,80,0.2); border-color: var(--accent); }
+    button.danger { border-color: var(--danger); color: var(--danger); }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-top: 0.75rem; }
+    .toolbar { margin-bottom: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
     input[type="file"] { display: none; }
-    .toolbar { margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .end-screen {
+      max-width: 720px;
+    }
+    .end-screen pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.75rem;
+    }
+    .lang-toggle button.active { border-color: var(--accent); background: rgba(63,185,80,0.15); }
     footer {
       grid-column: 1 / -1;
       padding: 0.75rem 1.5rem;
       border-top: 1px solid var(--border);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--muted);
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+      aside { border-right: none; border-bottom: 1px solid var(--border); }
     }
   </style>
 </head>
 <body>
+  <div id="quizBanner" class="banner hidden"></div>
   <header>
-    <h1>Finding Scrubber — HITL Microworld</h1>
-    <p>Synthetic VertiGreen fixture · Learning artifact · Not production UI</p>
+    <div>
+      <h1 id="titleMain">HITL Microworld — Decision Lock-in</h1>
+      <p id="subtitleMain">Synthetic VertiGreen · You are consciously in the loop</p>
+    </div>
+    <div class="header-actions">
+      <div class="lang-toggle">
+        <button type="button" id="langEn" class="active">EN</button>
+        <button type="button" id="langEs">ES</button>
+      </div>
+      <span id="runMeta" style="font-size:0.75rem;color:var(--muted)"></span>
+    </div>
   </header>
   <main>
     <aside>
       <div class="toolbar">
-        <label class="file-btn">
-          Load findings.json
-          <input type="file" id="fileInput" accept=".json" />
+        <label class="file-btn" id="loadFindingsLabel">
+          Load findings
+          <input type="file" id="findingsInput" accept=".json" />
+        </label>
+        <label class="file-btn" id="loadQuizLabel">
+          Load quiz
+          <input type="file" id="quizInput" accept=".json" />
         </label>
       </div>
+      <div id="progressText" style="font-size:0.75rem;color:var(--muted)"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
       <div id="findingList"></div>
     </aside>
-    <section class="panel">
-      <div id="detail">
-        <p style="color: var(--muted)">Select a finding or load <code>out/findings.json</code> from <code>make hitl-demo</code>.</p>
-      </div>
+    <section class="panel" id="mainPanel">
+      <p id="placeholder" style="color:var(--muted)">Loading microworld…</p>
     </section>
     <footer>
-      Geoffrey Litt — <em>Micro worlds</em>: scrub through agent reasoning before deciding in the Notion shared space.
-      See <code>hitl/NOTION-HITL.md</code> and <code>hitl/microworld/README.md</code>.
+      Geoffrey Litt — <em>Micro worlds</em>: lock each decision with intent before pushing to the Notion shared space.
+      See <code>hitl/NOTION-HITL.md</code>.
     </footer>
   </main>
+
   <script>
-    const SAMPLE = {
-      run_id: "hitl-sample",
-      company: "VertiGreen Robotics",
-      findings: [
-        {
-          finding_id: "F004",
-          fixture_path: "financials-summary.md",
-          pillar: "financials",
-          label: "needs_human",
-          agent_suggestion: "verify_financials",
-          rule_fired: "R006",
-          excerpt: "Financial Summary (Draft — Q1 2026) Synthetic fixture. Not audited.",
-          reasoning_steps: [
-            { step: 1, rule_id: "R006", description: "Unaudited or projected financial figures", matched_text: "not audited" },
-            { step: 2, rule_id: "R003", description: "Document self-flags for human review", matched_text: "Human review required" }
-          ]
-        },
-        {
-          finding_id: "F005",
-          fixture_path: "fake-invoice-redacted.txt",
-          pillar: "financials",
-          label: "needs_human",
-          agent_suggestion: "confirm_redaction",
-          rule_fired: "R002",
-          excerpt: "IBAN: NL** **** **** **** 42",
-          reasoning_steps: [
-            { step: 1, rule_id: "R002", description: "Partial bank account number visible", matched_text: "IBAN: NL**" }
-          ]
-        },
-        {
-          finding_id: "F006",
-          fixture_path: "cap-table-outline.md",
-          pillar: "legal",
-          label: "unclear",
-          agent_suggestion: "verify_cap_table",
-          rule_fired: "R005",
-          excerpt: "SAFE note mentioned in email thread — not reflected above",
-          reasoning_steps: [
-            { step: 1, rule_id: "R005", description: "Cap table or dilution signals need verification", matched_text: "SAFE" },
-            { step: 2, rule_id: "R004", description: "Ambiguous legal or binding language", matched_text: "Ambiguities" }
-          ]
-        }
-      ]
+    const I18N = {
+      en: {
+        title: "HITL Microworld — Decision Lock-in",
+        subtitle: "Synthetic VertiGreen · You are consciously in the loop",
+        quizBanner: "Quiz incomplete — using demo defaults from run hitl-20260908-214515",
+        loadFindings: "Load findings",
+        loadQuiz: "Load quiz",
+        progress: (locked, total) => `${locked} / ${total} locked`,
+        placeholder: "Select a finding to review agent reasoning and lock your decision.",
+        file: "File",
+        pillar: "Pillar",
+        rule: "Rule fired",
+        label: "Label",
+        suggestion: "Agent suggestion",
+        scrubber: "Reasoning scrubber",
+        matched: "Matched",
+        step: (i, n) => `Step ${i} / ${n}`,
+        decision: "Your decision",
+        agree: "Agree with agent",
+        override: "Override",
+        defer: "Defer",
+        rationale: "Rationale (required, min 8 chars)",
+        rationaleHint: "Explain why — this is your audit trail.",
+        saveDraft: "Save draft",
+        lockDecision: "Lock decision",
+        lockConfirm: "Lock this decision? It becomes immutable until you explicitly unlock.",
+        unlock: "Unlock",
+        unlockConfirm: "Unlock this decision? You will need to re-lock with a new rationale.",
+        locked: "Locked",
+        decided: "Draft saved",
+        unlocked: "Unreviewed",
+        allLockedTitle: "All decisions locked",
+        allLockedBody: "Download locks JSON, save to hitl/out/microworld-locks.json, then push to Notion.",
+        downloadLocks: "Download microworld-locks.json",
+        pushCmd: "python hitl/scripts/push_microworld_to_notion.py",
+        dryRunCmd: "python hitl/scripts/push_microworld_to_notion.py --dry-run",
+        pastePack: "Copy Notion paste pack",
+        notionDb: "Open Decisions DB",
+        gateNote: "Gate: Approved only if quiz passed or waived (record waiver in Rationale).",
+        rationaleShort: "Rationale must be at least 8 characters.",
+        pickDecision: "Choose agree, override, or defer before locking.",
+        moment: "Review moment",
+      },
+      es: {
+        title: "Micromundo HITL — Bloqueo de decisiones",
+        subtitle: "VertiGreen sintético · Usted está conscientemente en el bucle",
+        quizBanner: "Cuestionario incompleto — usando valores demo del run hitl-20260908-214515",
+        loadFindings: "Cargar hallazgos",
+        loadQuiz: "Cargar cuestionario",
+        progress: (locked, total) => `${locked} / ${total} bloqueadas`,
+        placeholder: "Seleccione un hallazgo para revisar el razonamiento del agente y bloquear su decisión.",
+        file: "Archivo",
+        pillar: "Pilar",
+        rule: "Regla activada",
+        label: "Etiqueta",
+        suggestion: "Sugerencia del agente",
+        scrubber: "Reproductor de razonamiento",
+        matched: "Coincidencia",
+        step: (i, n) => `Paso ${i} / ${n}`,
+        decision: "Su decisión",
+        agree: "De acuerdo con el agente",
+        override: "Anular",
+        defer: "Aplazar",
+        rationale: "Justificación (obligatoria, mín. 8 caracteres)",
+        rationaleHint: "Explique por qué — este es su registro de auditoría.",
+        saveDraft: "Guardar borrador",
+        lockDecision: "Bloquear decisión",
+        lockConfirm: "¿Bloquear esta decisión? Será inmutable hasta que la desbloquee explícitamente.",
+        unlock: "Desbloquear",
+        unlockConfirm: "¿Desbloquear? Deberá volver a bloquear con una nueva justificación.",
+        locked: "Bloqueada",
+        decided: "Borrador guardado",
+        unlocked: "Sin revisar",
+        allLockedTitle: "Todas las decisiones bloqueadas",
+        allLockedBody: "Descargue el JSON, guárdelo en hitl/out/microworld-locks.json y envíe a Notion.",
+        downloadLocks: "Descargar microworld-locks.json",
+        pushCmd: "python hitl/scripts/push_microworld_to_notion.py",
+        dryRunCmd: "python hitl/scripts/push_microworld_to_notion.py --dry-run",
+        pastePack: "Copiar paquete para Notion",
+        notionDb: "Abrir base Decisions",
+        gateNote: "Puerta: Aprobado solo si el cuestionario se pasó o se renunció (registre la renuncia en Justificación).",
+        rationaleShort: "La justificación debe tener al menos 8 caracteres.",
+        pickDecision: "Elija de acuerdo, anular o aplazar antes de bloquear.",
+        moment: "Momento de revisión",
+      },
     };
 
-    let data = SAMPLE;
+    const MOMENT_LABELS = {
+      iban_redaction: { en: "IBAN redaction", es: "Redacción IBAN" },
+      unaudited_financials: { en: "Unaudited financials", es: "Finanzas no auditadas" },
+      safe_cap_table: { en: "SAFE / cap table", es: "SAFE / tabla de capitalización" },
+      hallucinated_metric: { en: "Hallucinated metric", es: "Métrica no respaldada" },
+      impact_metrics: { en: "Impact metrics", es: "Métricas de impacto" },
+      unsigned_contract: { en: "Unsigned contract", es: "Contrato sin firmar" },
+      overview_metric: { en: "Overview metric", es: "Métrica del resumen" },
+      general: { en: "General review", es: "Revisión general" },
+    };
+
+    const DEFAULT_FINDINGS_URL = "defaults/findings-hitl-20260908-214515.json";
+    const QUIZ_PATHS = ["../out/quiz-answers.json", "out/quiz-answers.json"];
+
+    let lang = "en";
+    let findingsDoc = null;
+    let quizDoc = null;
+    let quizFromDefaults = true;
     let selectedId = null;
     let stepIndex = 0;
+    const decisions = new Map();
 
-    const findingList = document.getElementById("findingList");
-    const detail = document.getElementById("detail");
-    const fileInput = document.getElementById("fileInput");
+    const t = (key, ...args) => {
+      const v = I18N[lang][key];
+      return typeof v === "function" ? v(...args) : v;
+    };
 
-    fileInput.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      try {
-        const json = JSON.parse(await file.text());
-        if (!json.findings) throw new Error("Missing findings array");
-        data = json;
-        selectedId = null;
-        renderList();
-        detail.innerHTML = `<p style="color: var(--accent)">Loaded ${file.name} — ${json.findings.length} findings.</p>`;
-      } catch (err) {
-        alert("Invalid findings.json: " + err.message);
+    const el = (id) => document.getElementById(id);
+
+    function getParams() {
+      return new URLSearchParams(window.location.search);
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status} ${url}`);
+      return res.json();
+    }
+
+    async function loadQuiz() {
+      const params = getParams();
+      const quizParam = params.get("quiz");
+      const paths = quizParam ? [quizParam] : QUIZ_PATHS;
+      for (const p of paths) {
+        try {
+          quizDoc = await fetchJson(p);
+          quizFromDefaults = false;
+          return;
+        } catch (_) { /* try next */ }
       }
-    });
+      quizDoc = { quiz_passed: false, source: "demo-defaults" };
+      quizFromDefaults = true;
+    }
+
+    function normalizeFindings(doc) {
+      const findings = doc.gate_findings || doc.findings || [];
+      return {
+        run_id: doc.run_id,
+        company: doc.company || "VertiGreen Robotics",
+        scanned_at: doc.scanned_at,
+        findings,
+      };
+    }
+
+    async function loadFindings() {
+      const params = getParams();
+      const findingsParam = params.get("findings");
+      const paths = findingsParam
+        ? [findingsParam]
+        : ["../out/findings.json", "out/findings.json", DEFAULT_FINDINGS_URL];
+      for (const p of paths) {
+        try {
+          findingsDoc = normalizeFindings(await fetchJson(p));
+          return;
+        } catch (_) { /* try next */ }
+      }
+      throw new Error("Could not load findings");
+    }
+
+    function decisionState(findingId) {
+      const d = decisions.get(findingId);
+      if (!d) return "unlocked";
+      if (d.locked_at) return "locked";
+      if (d.human_decision) return "decided";
+      return "unlocked";
+    }
+
+    function lockedCount() {
+      return findingsDoc.findings.filter((f) => decisionState(f.finding_id) === "locked").length;
+    }
+
+    function updateBanner() {
+      const banner = el("quizBanner");
+      if (quizFromDefaults || !quizDoc?.quiz_passed) {
+        banner.textContent = t("quizBanner");
+        banner.classList.remove("hidden");
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
+
+    function updateHeader() {
+      el("titleMain").textContent = t("title");
+      el("subtitleMain").textContent = t("subtitle");
+      el("loadFindingsLabel").childNodes[0].textContent = t("loadFindings") + " ";
+      el("loadQuizLabel").childNodes[0].textContent = t("loadQuiz") + " ";
+      el("runMeta").textContent = findingsDoc
+        ? `${findingsDoc.company} · ${findingsDoc.run_id}`
+        : "";
+      updateProgress();
+      updateBanner();
+    }
+
+    function updateProgress() {
+      if (!findingsDoc) return;
+      const total = findingsDoc.findings.length;
+      const locked = lockedCount();
+      el("progressText").textContent = t("progress", locked, total);
+      el("progressFill").style.width = total ? `${(locked / total) * 100}%` : "0%";
+      if (locked === total && total > 0) renderEndScreen();
+    }
 
     function renderList() {
-      findingList.innerHTML = data.findings.map((f) => `
-        <button class="finding-item ${f.finding_id === selectedId ? "active" : ""}" data-id="${f.finding_id}">
-          ${f.finding_id}<span class="badge ${f.label}">${f.label}</span>
-          <div style="color: var(--muted); margin-top: 0.2rem; font-size: 0.72rem;">${f.fixture_path}</div>
-        </button>
-      `).join("");
-      findingList.querySelectorAll(".finding-item").forEach((btn) => {
+      const list = el("findingList");
+      list.innerHTML = findingsDoc.findings.map((f) => {
+        const state = decisionState(f.finding_id);
+        const moment = f.moment || "general";
+        const momentLabel = (MOMENT_LABELS[moment] || MOMENT_LABELS.general)[lang];
+        const stateLabel = t(state === "locked" ? "locked" : state === "decided" ? "decided" : "unlocked");
+        return `
+          <button class="finding-item ${f.finding_id === selectedId ? "active" : ""} ${state}"
+                  data-id="${f.finding_id}">
+            ${f.finding_id}<span class="badge ${f.label}">${f.label}</span>
+            <div style="color:var(--muted);margin-top:0.2rem;font-size:0.7rem;">${f.fixture_path}</div>
+            <span class="state-badge">${momentLabel} · ${stateLabel}</span>
+          </button>`;
+      }).join("");
+      list.querySelectorAll(".finding-item").forEach((btn) => {
         btn.addEventListener("click", () => {
           selectedId = btn.dataset.id;
           stepIndex = 0;
@@ -236,39 +481,279 @@
     }
 
     function renderDetail() {
-      const f = data.findings.find((x) => x.finding_id === selectedId);
-      if (!f) return;
-      const steps = f.reasoning_steps || [];
-      const step = steps[stepIndex] || { description: "No steps." };
+      const panel = el("mainPanel");
+      const f = findingsDoc.findings.find((x) => x.finding_id === selectedId);
+      if (!f) {
+        panel.innerHTML = `<p style="color:var(--muted)">${t("placeholder")}</p>`;
+        return;
+      }
 
-      detail.innerHTML = `
-        <h2 style="margin: 0 0 1rem; font-size: 1rem;">${f.finding_id} — ${f.fixture_path}</h2>
+      const steps = f.reasoning_steps || [];
+      const step = steps[stepIndex] || { description: "—" };
+      const d = decisions.get(f.finding_id) || {};
+      const state = decisionState(f.finding_id);
+      const moment = f.moment || "general";
+      const momentLabel = (MOMENT_LABELS[moment] || MOMENT_LABELS.general)[lang];
+      const isLocked = state === "locked";
+
+      panel.innerHTML = `
+        <h2 style="margin:0 0 0.75rem;font-size:1rem;">${f.finding_id} — ${f.fixture_path}</h2>
         <div class="meta-grid">
-          <div class="meta-card"><label>File</label><span>${f.fixture_path}</span></div>
-          <div class="meta-card"><label>Pillar</label><span>${f.pillar || "—"}</span></div>
-          <div class="meta-card"><label>Rule fired</label><span>${f.rule_fired}</span></div>
-          <div class="meta-card"><label>Label</label><span class="badge ${f.label}">${f.label}</span></div>
-          <div class="meta-card"><label>Suggested action</label><span>${f.agent_suggestion}</span></div>
+          <div class="meta-card"><label>${t("moment")}</label><span>${momentLabel}</span></div>
+          <div class="meta-card"><label>${t("file")}</label><span>${f.fixture_path}</span></div>
+          <div class="meta-card"><label>${t("pillar")}</label><span>${f.pillar || "—"}</span></div>
+          <div class="meta-card"><label>${t("rule")}</label><span>${f.rule_fired}</span></div>
+          <div class="meta-card"><label>${t("label")}</label><span class="badge ${f.label}">${f.label}</span></div>
+          <div class="meta-card"><label>${t("suggestion")}</label><span>${f.agent_suggestion}</span></div>
         </div>
-        <p style="font-size: 0.85rem; color: var(--muted);">${f.excerpt || ""}</p>
+        <p style="font-size:0.82rem;color:var(--muted)">${f.excerpt || ""}</p>
         <div class="scrubber">
-          <strong>Reasoning scrubber</strong>
+          <strong>${t("scrubber")}</strong>
           <div class="step-display">
             <div><strong>${step.rule_id || "—"}</strong> — ${step.description}</div>
-            ${step.matched_text ? `<div style="margin-top: 0.5rem; color: var(--warn);">Matched: "${step.matched_text}"</div>` : ""}
+            ${step.matched_text ? `<div style="margin-top:0.5rem;color:var(--warn);">${t("matched")}: "${step.matched_text}"</div>` : ""}
           </div>
           <div class="controls">
-            <button id="prevBtn" ${stepIndex === 0 ? "disabled" : ""}>← Prev</button>
-            <button id="nextBtn" ${stepIndex >= steps.length - 1 ? "disabled" : ""}>Next →</button>
-            <span class="progress">Step ${stepIndex + 1} / ${steps.length}</span>
+            <button id="prevBtn" ${stepIndex === 0 ? "disabled" : ""}>←</button>
+            <button id="nextBtn" ${stepIndex >= steps.length - 1 ? "disabled" : ""}>→</button>
+            <span style="color:var(--muted);font-size:0.78rem;">${t("step", stepIndex + 1, steps.length)}</span>
           </div>
         </div>
-      `;
-      document.getElementById("prevBtn").onclick = () => { stepIndex--; renderDetail(); };
-      document.getElementById("nextBtn").onclick = () => { stepIndex++; renderDetail(); };
+        <div class="decision-panel ${isLocked ? "locked-panel" : ""}" id="decisionPanel">
+          <strong>${t("decision")}</strong>
+          <div class="decision-options" id="decisionOptions">
+            ${["agree", "override", "defer"].map((opt) => `
+              <label>
+                <input type="radio" name="human_decision" value="${opt}"
+                  ${d.human_decision === opt ? "checked" : ""} ${isLocked ? "disabled" : ""} />
+                ${t(opt)}
+              </label>`).join("")}
+          </div>
+          <label for="rationale" style="font-size:0.78rem;color:var(--muted);">${t("rationale")}</label>
+          <p style="font-size:0.72rem;color:var(--muted);margin:0.25rem 0 0.5rem;">${t("rationaleHint")}</p>
+          <textarea id="rationale" ${isLocked ? "disabled" : ""} placeholder="">${d.rationale || ""}</textarea>
+          <div class="controls">
+            ${isLocked
+              ? `<button type="button" class="danger" id="unlockBtn">${t("unlock")}</button>
+                 <span style="color:var(--locked);font-size:0.78rem;">${t("locked")} · ${d.locked_at || ""}</span>`
+              : `<button type="button" id="saveDraftBtn">${t("saveDraft")}</button>
+                 <button type="button" class="primary" id="lockBtn">${t("lockDecision")}</button>`}
+          </div>
+        </div>`;
+
+      el("prevBtn").onclick = () => { stepIndex--; renderDetail(); };
+      el("nextBtn").onclick = () => { stepIndex++; renderDetail(); };
+
+      if (!isLocked) {
+        el("saveDraftBtn").onclick = saveDraft;
+        el("lockBtn").onclick = lockDecision;
+      } else {
+        el("unlockBtn").onclick = unlockDecision;
+      }
     }
 
-    renderList();
+    function readForm(findingId) {
+      const decision = document.querySelector('input[name="human_decision"]:checked');
+      const rationale = el("rationale").value.trim();
+      return {
+        finding_id: findingId,
+        human_decision: decision ? decision.value : null,
+        rationale,
+      };
+    }
+
+    function saveDraft() {
+      const f = findingsDoc.findings.find((x) => x.finding_id === selectedId);
+      const form = readForm(selectedId);
+      decisions.set(selectedId, {
+        ...decisions.get(selectedId),
+        ...form,
+        fixture_path: f.fixture_path,
+        agent_suggestion: f.agent_suggestion,
+        agent_label: f.label,
+        moment: f.moment,
+        status: "pending",
+      });
+      renderList();
+      updateProgress();
+    }
+
+    function lockDecision() {
+      const form = readForm(selectedId);
+      if (!form.human_decision) {
+        alert(t("pickDecision"));
+        return;
+      }
+      if (form.rationale.length < 8) {
+        alert(t("rationaleShort"));
+        return;
+      }
+      if (!confirm(t("lockConfirm"))) return;
+
+      const f = findingsDoc.findings.find((x) => x.finding_id === selectedId);
+      const now = new Date().toISOString();
+      decisions.set(selectedId, {
+        ...form,
+        fixture_path: f.fixture_path,
+        agent_suggestion: f.agent_suggestion,
+        agent_label: f.label,
+        moment: f.moment,
+        status: "reviewed",
+        locked_at: now,
+      });
+      renderList();
+      renderDetail();
+      updateProgress();
+
+      const next = findingsDoc.findings.find(
+        (x) => decisionState(x.finding_id) !== "locked" && x.finding_id !== selectedId
+      );
+      if (next) {
+        selectedId = next.finding_id;
+        stepIndex = 0;
+        renderList();
+        renderDetail();
+      }
+    }
+
+    function unlockDecision() {
+      if (!confirm(t("unlockConfirm"))) return;
+      const d = decisions.get(selectedId);
+      if (d) {
+        delete d.locked_at;
+        d.status = "pending";
+      }
+      renderList();
+      renderDetail();
+      updateProgress();
+    }
+
+    function buildLocksDocument() {
+      const locks = findingsDoc.findings
+        .map((f) => decisions.get(f.finding_id))
+        .filter((d) => d && d.locked_at)
+        .map((d) => ({
+          finding_id: d.finding_id,
+          fixture_path: d.fixture_path,
+          agent_suggestion: d.agent_suggestion,
+          agent_label: d.agent_label,
+          human_decision: d.human_decision,
+          rationale: d.rationale,
+          status: d.status || "reviewed",
+          locked_at: d.locked_at,
+          moment: d.moment,
+        }));
+
+      return {
+        version: 1,
+        run_id: findingsDoc.run_id,
+        company: findingsDoc.company,
+        quiz_passed: Boolean(quizDoc?.quiz_passed),
+        quiz_source: quizDoc?.source || (quizFromDefaults ? "demo-defaults" : "quiz-answers.json"),
+        locked_at: new Date().toISOString(),
+        reviewer: null,
+        run_link: `hitl/out/microworld-locks.json`,
+        locks,
+      };
+    }
+
+    function renderEndScreen() {
+      const doc = buildLocksDocument();
+      const panel = el("mainPanel");
+      const summaryRows = doc.locks.map((l) =>
+        `<tr><td>${l.finding_id}</td><td>${l.fixture_path}</td><td>${l.human_decision}</td><td>${l.rationale.slice(0, 60)}…</td></tr>`
+      ).join("");
+
+      panel.innerHTML = `
+        <div class="end-screen">
+          <h2>${t("allLockedTitle")}</h2>
+          <p>${t("allLockedBody")}</p>
+          <p style="font-size:0.8rem;color:var(--warn);">${t("gateNote")}</p>
+          <table style="width:100%;font-size:0.78rem;border-collapse:collapse;margin:1rem 0;">
+            <thead><tr style="text-align:left;color:var(--muted)">
+              <th>ID</th><th>Fixture</th><th>Decision</th><th>Rationale</th>
+            </tr></thead>
+            <tbody>${summaryRows}</tbody>
+          </table>
+          <div class="controls">
+            <button type="button" class="primary" id="downloadBtn">${t("downloadLocks")}</button>
+            <button type="button" id="pasteBtn">${t("pastePack")}</button>
+            <a href="https://app.notion.com/p/bb52cfa45b6744e59983528480fbab4b" target="_blank" rel="noopener">
+              <button type="button">${t("notionDb")}</button>
+            </a>
+          </div>
+          <pre id="pushInstructions"><code># One-command push (after saving download to hitl/out/)
+
+${t("dryRunCmd")}
+${t("pushCmd")}
+
+# Env: NOTION_API_TOKEN, NOTION_DECISIONS_DATA_SOURCE_ID</code></pre>
+        </div>`;
+
+      el("downloadBtn").onclick = () => {
+        const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "microworld-locks.json";
+        a.click();
+      };
+
+      el("pasteBtn").onclick = async () => {
+        const lines = [
+          "# Notion paste pack",
+          `Run: ${doc.run_id} · Quiz: ${doc.quiz_passed}`,
+          "",
+          ...doc.locks.map((l) =>
+            `- **${l.finding_id}** (${l.fixture_path}): ${l.human_decision} — ${l.rationale}`
+          ),
+        ];
+        await navigator.clipboard.writeText(lines.join("\n"));
+        el("pasteBtn").textContent = "✓ Copied";
+      };
+    }
+
+    el("langEn").onclick = () => { lang = "en"; el("langEn").classList.add("active"); el("langEs").classList.remove("active"); updateHeader(); renderList(); if (selectedId) renderDetail(); };
+    el("langEs").onclick = () => { lang = "es"; el("langEs").classList.add("active"); el("langEn").classList.remove("active"); updateHeader(); renderList(); if (selectedId) renderDetail(); };
+
+    el("findingsInput").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        findingsDoc = normalizeFindings(JSON.parse(await file.text()));
+        selectedId = findingsDoc.findings[0]?.finding_id || null;
+        updateHeader();
+        renderList();
+        renderDetail();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    el("quizInput").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        quizDoc = JSON.parse(await file.text());
+        quizFromDefaults = false;
+        updateBanner();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    async function init() {
+      try {
+        await Promise.all([loadQuiz(), loadFindings()]);
+        selectedId = findingsDoc.findings[0]?.finding_id || null;
+        updateHeader();
+        renderList();
+        renderDetail();
+      } catch (err) {
+        el("placeholder").textContent = "Failed to load: " + err.message;
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>
