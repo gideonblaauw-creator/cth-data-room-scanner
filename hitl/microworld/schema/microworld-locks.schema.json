@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cleantechhub.net/schemas/microworld-locks.v1.json",
+  "title": "MicroworldLocks",
+  "type": "object",
+  "required": ["version", "run_id", "company", "quiz_passed", "locked_at", "locks"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "company": { "type": "string", "minLength": 1 },
+    "quiz_passed": { "type": "boolean" },
+    "locked_at": { "type": "string", "format": "date-time" },
+    "reviewer": { "type": ["string", "null"] },
+    "run_link": { "type": ["string", "null"] },
+    "quiz_source": { "type": ["string", "null"] },
+    "locks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/lock" }
+    }
+  },
+  "$defs": {
+    "lock": {
+      "type": "object",
+      "required": [
+        "finding_id",
+        "fixture_path",
+        "agent_suggestion",
+        "human_decision",
+        "rationale",
+        "status",
+        "locked_at"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "finding_id": { "type": "string", "pattern": "^F[0-9]{3}$" },
+        "fixture_path": { "type": "string", "minLength": 1 },
+        "agent_suggestion": { "type": "string", "minLength": 1 },
+        "agent_label": { "type": "string" },
+        "human_decision": {
+          "type": "string",
+          "enum": ["agree", "override", "defer"]
+        },
+        "rationale": { "type": "string", "minLength": 8 },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "waived", "blocked"] },
+        "locked_at": { "type": "string", "format": "date-time" },
+        "moment": { "type": "string" }
+      }
+    }
+  }
+}
