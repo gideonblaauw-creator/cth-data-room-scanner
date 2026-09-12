@@ -1,0 +1,5 @@
+# LangGraph dogfood — optional; install for HITL graph only
+#   pip install -r requirements.txt -r requirements-langgraph.txt
+langgraph==1.2.11
+langgraph-checkpoint==4.2.0
+langsmith==0.12.4

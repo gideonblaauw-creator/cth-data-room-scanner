@@ -1,0 +1,48 @@
+{
+  "decisions": [
+    {
+      "finding_id": "F001",
+      "human_decision": "defer",
+      "rationale": "Cap table language needs partner confirmation before share.",
+      "status": "reviewed"
+    },
+    {
+      "finding_id": "F004",
+      "human_decision": "agree",
+      "rationale": "Unaudited financials flagged correctly; manual review warranted.",
+      "status": "reviewed"
+    },
+    {
+      "finding_id": "F005",
+      "human_decision": "override",
+      "rationale": "Partial IBAN is synthetic fixture; redaction already applied in source.",
+      "status": "reviewed"
+    },
+    {
+      "finding_id": "F006",
+      "human_decision": "agree",
+      "rationale": "Legal ambiguity in contract excerpt matches agent needs_human label.",
+      "status": "reviewed"
+    },
+    {
+      "finding_id": "F008",
+      "human_decision": "agree",
+      "rationale": "Credential-like pattern in fake invoice requires human gate.",
+      "status": "reviewed"
+    },
+    {
+      "finding_id": "F009",
+      "human_decision": "defer",
+      "rationale": "ESG claims need external verification before auto_ok.",
+      "status": "reviewed"
+    },
+    {
+      "finding_id": "F010",
+      "human_decision": "agree",
+      "rationale": "Tech stack doc is standard auto_ok with no gate signals.",
+      "status": "reviewed"
+    }
+  ],
+  "quiz_passed": true,
+  "reviewer": "langgraph-dogfood"
+}
