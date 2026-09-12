@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HITL Microworld — VertiGreen Review Loop</title>
+  <title>Understanding Lab — Playground (VertiGreen)</title>
   <style>
     :root {
       --bg: #0f1419;
@@ -198,8 +198,8 @@
   <div id="quizBanner" class="banner hidden"></div>
   <header>
     <div>
-      <h1 id="titleMain">HITL Microworld — VertiGreen Review Loop</h1>
-      <p id="subtitleMain">Synthetic dataroom · ≤10 min loop · local lock-in</p>
+      <h1 id="titleMain">Understanding Lab — Playground</h1>
+      <p id="subtitleMain">Beat 3 · VertiGreen synthetic scenarios · agree / override / defer</p>
     </div>
     <div class="header-actions">
       <div class="lang-toggle">
@@ -212,7 +212,7 @@
   <nav class="tabs" id="tabNav">
     <button type="button" data-tab="context" class="active" id="tabContext">Context</button>
     <button type="button" data-tab="explainer" id="tabExplainer">Explainer</button>
-    <button type="button" data-tab="tree" id="tabTree" class="locked-tab">Decision Tree</button>
+    <button type="button" data-tab="tree" id="tabTree" class="locked-tab">Playground</button>
     <button type="button" data-tab="decisions" id="tabDecisions">Decisions DB</button>
     <button type="button" data-tab="gh" id="tabGh">GH repo</button>
     <button type="button" data-tab="clarifications" id="tabClarifications">Clarifications</button>
@@ -333,19 +333,19 @@
 
     const I18N = {
       en: {
-        title: "HITL Microworld — VertiGreen Review Loop",
-        subtitle: "Synthetic dataroom · ≤10 min loop · local lock-in",
-        tabs: { context: "Context", explainer: "Explainer", tree: "Decision Tree", decisions: "Decisions DB", gh: "GH repo", clarifications: "Clarifications" },
+        title: "Understanding Lab — Playground",
+        subtitle: "Beat 3 · VertiGreen synthetic scenarios · agree / override / defer",
+        tabs: { context: "Context", explainer: "Explainer", tree: "Playground", decisions: "Decisions DB", gh: "GH repo", clarifications: "Clarifications" },
         locksReady: "Locks ready — not yet in Notion",
         locksReadyHint: "Download or copy JSON, then push via Infra/Hands (token stays in env, not browser).",
         copyJson: "Copy JSON",
         downloadLocks: "Download microworld-locks.json",
         openDecisionsDb: "Open Decisions DB",
-        quizBanner: "Complete the Explainer quiz to unlock the Decision Tree tab.",
-        quizPassed: "Quiz passed — Decision Tree unlocked.",
+        quizBanner: "Complete the Explainer quiz to unlock the Playground tab (Beat 3).",
+        quizPassed: "Quiz passed — Playground unlocked.",
         loadFindings: "Load findings",
         progress: (l, t) => `${l} / ${t} locked`,
-        treeLocked: "Pass the Explainer quiz first (Explainer tab).",
+        treeLocked: "Pass the Explainer quiz first (Explainer tab) to open Playground.",
         placeholder: "Select a finding to review agent reasoning and lock your decision.",
         agree: "Agree with agent", override: "Override", defer: "Defer",
         rationale: "Rationale (required, min 8 chars)",
@@ -360,7 +360,7 @@
         label: "Label", suggestion: "Agent suggestion", scrubber: "Reasoning scrubber",
         matched: "Matched", step: (i, n) => `Step ${i} / ${n}`, decision: "Your decision",
         localLocks: "Local locks (not yet pushed)",
-        noLocalLocks: "No locked decisions yet. Complete the Decision Tree tab first.",
+        noLocalLocks: "No locked decisions yet. Complete the Playground tab first.",
         pushRecipe: "Push recipe (Infisical / env token only)",
         pushCmd: "python scripts/push_microworld_to_notion.py",
         dryRunCmd: "python scripts/push_microworld_to_notion.py --dry-run",
@@ -371,9 +371,9 @@
         findingId: "Finding ID", note: "Note", created: "Created",
       },
       es: {
-        title: "Micromundo HITL — Bucle de revisión VertiGreen",
-        subtitle: "Dataroom sintético · bucle ≤10 min · bloqueo local",
-        tabs: { context: "Contexto", explainer: "Explicador", tree: "Árbol de decisiones", decisions: "Base Decisions", gh: "Repo GH", clarifications: "Aclaraciones" },
+        title: "Understanding Lab — Playground",
+        subtitle: "Beat 3 · escenarios sintéticos VertiGreen · acordar / anular / aplazar",
+        tabs: { context: "Contexto", explainer: "Explicador", tree: "Playground", decisions: "Base Decisions", gh: "Repo GH", clarifications: "Aclaraciones" },
         locksReady: "Bloqueos listos — aún no en Notion",
         locksReadyHint: "Descargue o copie el JSON, luego envíe vía Infra/Hands (token en env, no en navegador).",
         copyJson: "Copiar JSON",
@@ -590,18 +590,18 @@
       const en = lang === "en";
       const staticBanner = isStaticPublicHost()
         ? `<div class="card" style="border-color:var(--accent-bright);margin-bottom:1rem">
-            <strong>${en ? "Public training host" : "Host público de entrenamiento"}</strong>
+            <strong>${en ? "Public Understanding Lab (Playground)" : "Understanding Lab pública (Playground)"}</strong>
             <p style="margin:0.5rem 0 0">${en
-              ? "You are on the stable static microworld (synthetic VertiGreen only). Production client review stays on localhost / Tailscale — see <code>hitl/STABLE-HOST.md</code>."
-              : "Está en el micromundo estático público (solo VertiGreen sintético). La revisión de clientes reales permanece en localhost / Tailscale."}</p>
+              ? "Stable static host for Beat 3 Playground (synthetic VertiGreen only). CTA: View Understanding Lab. Production client review stays on localhost / Tailscale — see <code>hitl/STABLE-HOST.md</code> (<code>HITL_HTML_STABLE_URL</code>)."
+              : "Host estático para Playground (Beat 3). Solo VertiGreen sintético. La revisión de clientes reales permanece en localhost / Tailscale."}</p>
           </div>`
         : "";
       el("panel-context").innerHTML = `
         ${staticBanner}
-        <h2>${en ? "Why this microworld?" : "¿Por qué este micromundo?"}</h2>
+        <h2>${en ? "Why the Understanding Lab?" : "¿Por qué el Understanding Lab?"}</h2>
         <p>${en
-          ? "The <strong>Dataroom Reviewer HITL loop</strong> trains reviewers to consciously agree, override, or defer on agent findings before they enter the shared Notion Decisions database. This page merges the Explainer, interactive microworld, and Decisions/GH surfaces into one ≤10-minute local loop."
-          : "El <strong>bucle HITL del revisor de dataroom</strong> entrena a los revisores a aceptar, anular o aplazar hallazgos del agente antes de entrar en la base Decisions de Notion."}</p>
+          ? "The <strong>Dataroom Reviewer Understanding Lab</strong> trains reviewers before shared Notion decisions. <strong>Beat 3: Playground</strong> walks scenarios → consequences → 2–4 options with tradeoffs → your choice (agree / override / defer)."
+          : "El <strong>Understanding Lab</strong> entrena revisores antes de las decisiones en Notion. <strong>Beat 3: Playground</strong> recorre escenarios → consecuencias → opciones con tradeoffs → su elección."}</p>
 
         <h3>${en ? "Sample company: VertiGreen Robotics" : "Empresa de muestra: VertiGreen Robotics"}</h3>
         <p>${en
@@ -612,7 +612,7 @@
         <div class="flow-steps">
           <div class="flow-step"><strong>1. Home</strong>${en ? "Lab entry" : "Entrada al lab"}</div>
           <div class="flow-step"><strong>2. Explainer</strong>${en ? "Quiz gate" : "Puerta del cuestionario"}</div>
-          <div class="flow-step"><strong>3. Micro world</strong>${en ? "Lock decisions" : "Bloquear decisiones"}</div>
+          <div class="flow-step"><strong>3. Playground</strong>${en ? "Scenarios → choose" : "Escenarios → elegir"}</div>
           <div class="flow-step"><strong>4. Decisions DB</strong>${en ? "Shared space" : "Espacio compartido"}</div>
           <div class="flow-step"><strong>5. Next</strong>${en ? "Push / approve" : "Enviar / aprobar"}</div>
         </div>
@@ -664,7 +664,7 @@ python scripts/push_microworld_to_notion.py</pre>
       el("panel-explainer").innerHTML = `
         <h2>${lang === "en" ? "Explainer — agent labels & quiz gate" : "Explicador — etiquetas y cuestionario"}</h2>
         <p>${lang === "en"
-          ? "Read the concepts below, then answer all five questions. You must pass before the Decision Tree unlocks."
+          ? "Read the concepts below, then answer all five questions. You must pass before Playground (Beat 3) unlocks."
           : "Lea los conceptos y responda las cinco preguntas para desbloquear el Árbol de decisiones."}</p>
 
         <h3>${lang === "en" ? "Agent labels" : "Etiquetas del agente"}</h3>
@@ -687,7 +687,7 @@ python scripts/push_microworld_to_notion.py</pre>
           ${passed
             ? `<span style="color:var(--accent-bright)">✓ ${lang === "en" ? "Quiz passed" : "Cuestionario aprobado"} (${quizState.score}/5)</span>
                <button type="button" id="retakeQuiz">${lang === "en" ? "Retake" : "Repetir"}</button>
-               <button type="button" class="primary" id="goToTree">${lang === "en" ? "Go to Decision Tree" : "Ir al Árbol"}</button>`
+               <button type="button" class="primary" id="goToTree">${lang === "en" ? "View Understanding Lab (Playground)" : "Ver Playground"}</button>`
             : `<button type="button" class="primary" id="submitQuiz">${lang === "en" ? "Submit quiz" : "Enviar cuestionario"}</button>`}
         </div>`;
 
