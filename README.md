@@ -73,6 +73,18 @@ This HITL loop implements ideas from [Geoffrey Litt's talk on explorable explana
 
 **Gate:** A run is Approved only if the reviewer passes the quiz or records an explicit waiver in Notion.
 
+### LangGraph dogfood (interrupt → Understanding Lab)
+
+Production-pattern HITL graph with `interrupt` / resume into the Tier 1–2 Understanding Lab loop. Scanner-only Notion URLs; no secrets required locally.
+
+```bash
+pip install -r requirements.txt -r requirements-langgraph.txt
+make langgraph-dogfood   # auto-resume smoke
+# or: python3 scripts/langgraph_dogfood.py start
+```
+
+Runbook: `hitl/langgraph/README.md`. LangSmith env names in `.env.example` (keys via Infisical).
+
 ## Dry-run (no API keys)
 
 ```bash
