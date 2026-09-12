@@ -16,12 +16,14 @@ from redis import Redis
 from rq import Queue
 from rq.job import Job
 
+from app.review import review_bp
 from scanner.config import APP_HOST, APP_PORT, REDIS_URL, RQ_QUEUE_NAME
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.register_blueprint(review_bp)
 redis_conn = Redis.from_url(REDIS_URL)
 queue = Queue(RQ_QUEUE_NAME, connection=redis_conn)
 
@@ -109,6 +111,11 @@ FORM_HTML = """<!DOCTYPE html>
       {% if result %}
       <pre>{{ result }}</pre>
       {% endif %}
+      {% if review_url %}
+      <p style="margin-top:12px">
+        <a href="{{ review_url }}" style="font-weight:600;color:var(--cth-primary)">Review findings →</a>
+      </p>
+      {% endif %}
       {% if error %}
       <pre style="color:#991B1B">{{ error }}</pre>
       {% endif %}
@@ -164,16 +171,21 @@ def job_status(job_id: str):
     status = job.get_status()
     result = None
     error = None
+    review_url = None
 
     if job.is_finished:
-        result = job.result
-        if isinstance(result, dict):
-            result = result.get("summary", str(result))
+        job_result = job.result
+        if isinstance(job_result, dict):
+            result = job_result.get("summary", str(job_result))
+            if job_result.get("findings_path"):
+                review_url = url_for("review.review_job", job_id=job_id)
+        else:
+            result = str(job_result)
     elif job.is_failed:
         error = str(job.exc_info or job.meta.get("error", "Unknown error"))
 
     return render_template_string(
-        FORM_HTML, job_id=job_id, status=status, result=result, error=error
+        FORM_HTML, job_id=job_id, status=status, result=result, error=error, review_url=review_url
     )
 
 

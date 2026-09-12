@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTH Production Reviewer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #2D6A4F;
+      --accent-bright: #40916C;
+      --cth-dark: #1B4332;
+      --needs_human: #f85149;
+      --unclear: #d29922;
+      --auto_ok: #3fb950;
+      --locked: #58a6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Inter, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, var(--cth-dark), var(--accent));
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    header p { font-size: 0.85rem; opacity: 0.9; margin-top: 0.25rem; }
+    .top-bar {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
+      padding: 0.75rem 1.5rem; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar button, .top-bar select {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    }
+    .top-bar button.primary { background: var(--accent); border-color: var(--accent-bright); color: #fff; }
+    .top-bar button:hover { border-color: var(--accent-bright); }
+    .banner {
+      margin: 0.75rem 1.5rem; padding: 0.75rem 1rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface); font-size: 0.85rem;
+    }
+    .banner.info { border-color: var(--accent); }
+    .banner.success { border-color: var(--auto_ok); background: rgba(63,185,80,0.08); }
+    .banner.hidden { display: none; }
+    .banner-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .layout {
+      display: grid; grid-template-columns: 280px 1fr; gap: 0;
+      min-height: calc(100vh - 180px);
+    }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+    .sidebar {
+      border-right: 1px solid var(--border); background: var(--surface);
+      overflow-y: auto; max-height: calc(100vh - 180px);
+    }
+    .sidebar-head {
+      padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem; color: var(--muted);
+    }
+    .filter-row { padding: 0.5rem 1rem; display: flex; gap: 0.35rem; flex-wrap: wrap; }
+    .filter-row button {
+      font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer;
+    }
+    .filter-row button.active { border-color: var(--accent-bright); color: var(--text); }
+    .finding-list { padding: 0.5rem; }
+    .finding-item {
+      display: block; width: 100%; text-align: left;
+      padding: 0.6rem 0.75rem; margin-bottom: 0.35rem;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); cursor: pointer; font-size: 0.8rem;
+    }
+    .finding-item:hover { border-color: var(--accent); }
+    .finding-item.active { border-color: var(--accent-bright); background: rgba(45,106,79,0.15); }
+    .finding-item.locked { border-left: 3px solid var(--locked); }
+    .badge {
+      display: inline-block; font-size: 0.62rem; padding: 0.1rem 0.35rem;
+      border-radius: 4px; font-weight: 600; text-transform: uppercase; margin-left: 0.35rem;
+    }
+    .badge.needs_human { background: rgba(248,81,73,0.2); color: var(--needs_human); }
+    .badge.unclear { background: rgba(210,153,34,0.2); color: var(--unclear); }
+    .badge.auto_ok { background: rgba(63,185,80,0.2); color: var(--auto_ok); }
+    .main { padding: 1.25rem; overflow-y: auto; }
+    .meta-card {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .meta-card > div {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.6rem 0.75rem;
+    }
+    .meta-card label { display: block; font-size: 0.68rem; color: var(--muted); }
+    .progress-wrap { margin-bottom: 1rem; }
+    .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent-bright); transition: width 0.2s; }
+    .decision-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem; margin-top: 1rem;
+    }
+    .decision-panel.locked-panel { border-color: var(--locked); }
+    .reasoning { margin: 0.75rem 0; font-size: 0.85rem; }
+    .reasoning li { margin-left: 1.25rem; margin-bottom: 0.35rem; color: var(--muted); }
+    .excerpt {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.75rem; font-size: 0.82rem; margin: 0.75rem 0; color: var(--muted);
+    }
+    .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .controls button {
+      padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); cursor: pointer;
+    }
+    .controls button.primary { background: var(--accent); border-color: var(--accent-bright); color: #fff; }
+    .controls button.decision-agree { border-color: var(--auto_ok); }
+    .controls button.decision-override { border-color: var(--needs_human); }
+    .controls button.decision-defer { border-color: var(--unclear); }
+    .controls button.selected { box-shadow: 0 0 0 2px var(--accent-bright); }
+    textarea {
+      width: 100%; min-height: 70px; margin-top: 0.75rem; padding: 0.6rem;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: inherit; font-size: 0.85rem; resize: vertical;
+    }
+    .placeholder { color: var(--muted); font-size: 0.9rem; padding: 2rem; text-align: center; }
+    .mono { font-family: ui-monospace, monospace; font-size: 0.78rem; }
+    footer {
+      padding: 1rem 1.5rem; text-align: center; font-size: 0.72rem;
+      color: var(--muted); border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="pageTitle">CTH Production Reviewer</h1>
+    <p id="pageSubtitle">Real scan findings · agree / override / defer · local locks</p>
+  </header>
+
+  <div class="top-bar">
+    <button type="button" id="langEn">EN</button>
+    <button type="button" id="langEs">ES</button>
+    <select id="labelFilter" aria-label="Filter by label">
+      <option value="all">All labels</option>
+      <option value="needs_human">needs_human</option>
+      <option value="unclear">unclear</option>
+      <option value="auto_ok">auto_ok</option>
+    </select>
+    <span id="runMeta" class="mono" style="color:var(--muted);margin-left:auto"></span>
+  </div>
+
+  <div id="infoBanner" class="banner info">
+    <strong id="bannerTitle">Local locks only</strong> —
+    <span id="bannerHint">Decisions save to disk on this server. Notion push stays Infra/Hands via <code>scripts/push_microworld_to_notion.py</code> (env token only).</span>
+  </div>
+  <div id="locksBanner" class="banner success hidden"></div>
+  <div id="errorBanner" class="banner hidden" style="border-color:var(--needs_human)"></div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <span id="progressText">0 / 0 locked</span>
+        <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div></div>
+      </div>
+      <div class="filter-row" id="quickFilters"></div>
+      <div class="finding-list" id="findingList"></div>
+    </aside>
+    <main class="main" id="mainPanel">
+      <p class="placeholder" id="placeholder">Loading findings…</p>
+    </main>
+  </div>
+
+  <footer>CTH Growth Services · CLEANTECHHUB INTERNATIONAL S.L. · localhost-only in v1</footer>
+
+  <script>
+    const I18N = {
+      en: {
+        title: "CTH Production Reviewer",
+        subtitle: "Real scan findings · agree / override / defer · local locks",
+        bannerTitle: "Local locks only",
+        bannerHint: "Decisions save to disk on this server. Notion push stays Infra/Hands via scripts/push_microworld_to_notion.py (env token only).",
+        locksReady: "All findings locked",
+        locksReadyHint: "Download review-locks.json or save to server. Upload already ran — decisions are for audit in v1.",
+        downloadLocks: "Download review-locks.json",
+        saveServer: "Save to server",
+        savedServer: "Saved to server",
+        progress: (l, t) => `${l} / ${t} locked`,
+        placeholder: "Select a finding to review agent reasoning and lock your decision.",
+        agree: "Agree", override: "Override", defer: "Defer",
+        rationale: "Rationale (min 8 characters)",
+        lockDecision: "Lock decision",
+        unlock: "Unlock",
+        lockConfirm: "Lock this decision? It becomes immutable until you unlock.",
+        unlockConfirm: "Unlock and edit this decision?",
+        pickDecision: "Choose agree, override, or defer before locking.",
+        shortRationale: "Rationale must be at least 8 characters.",
+        locked: "Locked", draft: "Draft", unreviewed: "Unreviewed",
+        agentLabel: "Agent label", suggestion: "Suggestion", rule: "Rule", source: "Source", pillar: "Pillar",
+        reasoning: "Reasoning steps", excerpt: "Excerpt",
+        loadError: "Could not load findings for this job.",
+        filterAll: "All labels",
+      },
+      es: {
+        title: "Revisor de producción CTH",
+        subtitle: "Hallazgos reales · aceptar / anular / aplazar · bloqueos locales",
+        bannerTitle: "Solo bloqueos locales",
+        bannerHint: "Las decisiones se guardan en disco. Notion vía Infra/Hands con scripts/push_microworld_to_notion.py (token en env).",
+        locksReady: "Todos los hallazgos bloqueados",
+        locksReadyHint: "Descargue review-locks.json o guarde en servidor. La subida ya corrió — decisiones para auditoría en v1.",
+        downloadLocks: "Descargar review-locks.json",
+        saveServer: "Guardar en servidor",
+        savedServer: "Guardado en servidor",
+        progress: (l, t) => `${l} / ${t} bloqueados`,
+        placeholder: "Seleccione un hallazgo para revisar y bloquear su decisión.",
+        agree: "De acuerdo", override: "Anular", defer: "Aplazar",
+        rationale: "Justificación (mín. 8 caracteres)",
+        lockDecision: "Bloquear decisión",
+        unlock: "Desbloquear",
+        lockConfirm: "¿Bloquear esta decisión?",
+        unlockConfirm: "¿Desbloquear para editar?",
+        pickDecision: "Elija de acuerdo, anular o aplazar antes de bloquear.",
+        shortRationale: "La justificación debe tener al menos 8 caracteres.",
+        locked: "Bloqueado", draft: "Borrador", unreviewed: "Sin revisar",
+        agentLabel: "Etiqueta agente", suggestion: "Sugerencia", rule: "Regla", source: "Fuente", pillar: "Pilar",
+        reasoning: "Pasos de razonamiento", excerpt: "Extracto",
+        loadError: "No se pudieron cargar hallazgos para este trabajo.",
+        filterAll: "Todas las etiquetas",
+      },
+    };
+
+    const STORAGE = { lang: "cth-review-lang", decisions: "cth-review-decisions" };
+    let lang = localStorage.getItem(STORAGE.lang) || "en";
+    let jobId = null;
+    let findingsDoc = null;
+    let selectedId = null;
+    let labelFilter = "all";
+    let decisions = loadDecisions();
+
+    const t = (key, ...args) => {
+      const v = I18N[lang][key];
+      return typeof v === "function" ? v(...args) : v;
+    };
+    const el = (id) => document.getElementById(id);
+
+    function loadDecisions() {
+      try {
+        const raw = localStorage.getItem(STORAGE.decisions);
+        return raw ? new Map(Object.entries(JSON.parse(raw))) : new Map();
+      } catch { return new Map(); }
+    }
+    function saveDecisions() {
+      localStorage.setItem(STORAGE.decisions, JSON.stringify(Object.fromEntries(decisions)));
+    }
+    function storageKey() { return `${STORAGE.decisions}-${jobId}`; }
+
+    function parseJobId() {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const idx = parts.indexOf("review");
+      if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
+      return new URLSearchParams(window.location.search).get("job_id") || "demo";
+    }
+
+    async function loadFindings() {
+      jobId = parseJobId();
+      const pathParam = new URLSearchParams(window.location.search).get("path");
+      let url = `/api/review/${encodeURIComponent(jobId)}/findings`;
+      if (pathParam) url += `?path=${encodeURIComponent(pathParam)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(await res.text());
+      findingsDoc = await res.json();
+      // Restore decisions for this job
+      try {
+        const raw = localStorage.getItem(storageKey());
+        if (raw) decisions = new Map(Object.entries(JSON.parse(raw)));
+      } catch { decisions = new Map(); }
+      el("runMeta").textContent = `${findingsDoc.company} · ${findingsDoc.run_id} · ${findingsDoc.source || ""}`;
+    }
+
+    function filteredFindings() {
+      if (!findingsDoc) return [];
+      if (labelFilter === "all") return findingsDoc.findings;
+      return findingsDoc.findings.filter((f) => f.label === labelFilter);
+    }
+
+    function decisionState(findingId) {
+      const d = decisions.get(findingId);
+      if (!d) return "unreviewed";
+      if (d.locked_at) return "locked";
+      if (d.human_decision) return "draft";
+      return "unreviewed";
+    }
+
+    function lockedCount() {
+      if (!findingsDoc) return 0;
+      return findingsDoc.findings.filter((f) => decisionState(f.finding_id) === "locked").length;
+    }
+
+    function allLocked() {
+      const total = findingsDoc?.findings?.length || 0;
+      return total > 0 && lockedCount() === total;
+    }
+
+    function buildLocksDocument() {
+      const locks = findingsDoc.findings
+        .map((f) => decisions.get(f.finding_id))
+        .filter((d) => d && d.locked_at)
+        .map((d) => ({
+          finding_id: d.finding_id,
+          fixture_path: d.fixture_path || d.source_path,
+          agent_suggestion: d.agent_suggestion,
+          agent_label: d.agent_label,
+          human_decision: d.human_decision,
+          rationale: d.rationale,
+          status: d.status || "reviewed",
+          locked_at: d.locked_at,
+          moment: d.moment,
+        }));
+      return {
+        version: 1,
+        run_id: findingsDoc.run_id,
+        company: findingsDoc.company,
+        quiz_passed: true,
+        quiz_source: "production-review",
+        locked_at: new Date().toISOString(),
+        reviewer: null,
+        run_link: findingsDoc.findings_path || window.location.href,
+        locks,
+      };
+    }
+
+    function updateBanners() {
+      const locksBanner = el("locksBanner");
+      if (allLocked()) {
+        locksBanner.className = "banner success";
+        locksBanner.innerHTML = `
+          <strong>${t("locksReady")}</strong> — ${t("locksReadyHint")}
+          <div class="banner-actions">
+            <button type="button" class="primary" id="bannerDownload">${t("downloadLocks")}</button>
+            <button type="button" id="bannerSave">${t("saveServer")}</button>
+          </div>`;
+        locksBanner.classList.remove("hidden");
+        el("bannerDownload").onclick = downloadLocks;
+        el("bannerSave").onclick = saveLocksToServer;
+      } else {
+        locksBanner.classList.add("hidden");
+      }
+    }
+
+    function downloadLocks() {
+      const doc = buildLocksDocument();
+      const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "review-locks.json";
+      a.click();
+    }
+
+    async function saveLocksToServer() {
+      const doc = buildLocksDocument();
+      const res = await fetch(`/api/review/${encodeURIComponent(jobId)}/locks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(doc),
+      });
+      const data = await res.json();
+      if (data.ok) alert(t("savedServer") + `: ${data.path}`);
+      else alert(data.errors?.join("\n") || "Save failed");
+    }
+
+    function renderList() {
+      const list = el("findingList");
+      const items = filteredFindings();
+      list.innerHTML = items.map((f) => {
+        const state = decisionState(f.finding_id);
+        const stateLabel = t(state === "locked" ? "locked" : state === "draft" ? "draft" : "unreviewed");
+        const path = f.source_path || f.fixture_path || "";
+        return `<button class="finding-item ${f.finding_id === selectedId ? "active" : ""} ${state}" data-id="${f.finding_id}">
+          ${f.finding_id}<span class="badge ${f.label}">${f.label}</span>
+          <div style="color:var(--muted);margin-top:0.2rem;font-size:0.7rem;">${path}</div>
+          <span style="font-size:0.62rem;color:var(--muted);display:block;margin-top:0.2rem;">${stateLabel}</span>
+        </button>`;
+      }).join("") || `<p class="placeholder">${t("filterAll")}: 0</p>`;
+      list.querySelectorAll(".finding-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedId = btn.dataset.id;
+          renderList();
+          renderDetail();
+        });
+      });
+      updateProgress();
+    }
+
+    function updateProgress() {
+      if (!findingsDoc) return;
+      const total = findingsDoc.findings.length;
+      const locked = lockedCount();
+      el("progressText").textContent = t("progress", locked, total);
+      el("progressFill").style.width = total ? `${(locked / total) * 100}%` : "0%";
+      updateBanners();
+    }
+
+    function renderDetail() {
+      const panel = el("mainPanel");
+      const f = findingsDoc?.findings.find((x) => x.finding_id === selectedId);
+      if (!f) {
+        panel.innerHTML = `<p class="placeholder">${t("placeholder")}</p>`;
+        return;
+      }
+      const d = decisions.get(f.finding_id) || {};
+      const state = decisionState(f.finding_id);
+      const isLocked = state === "locked";
+      const path = f.source_path || f.fixture_path || "";
+      const steps = (f.reasoning_steps || []).map((s) =>
+        `<li><strong>${s.step}.</strong> ${s.description}${s.matched_text ? ` <span class="mono">"${s.matched_text}"</span>` : ""}</li>`
+      ).join("");
+
+      panel.innerHTML = `
+        <div class="meta-card">
+          <div><label>${t("pillar")}</label>${f.pillar}</div>
+          <div><label>${t("agentLabel")}</label><span class="badge ${f.label}">${f.label}</span></div>
+          <div><label>${t("rule")}</label>${f.rule_fired || "—"}</div>
+          <div><label>${t("source")}</label><span class="mono">${path}</span></div>
+        </div>
+        <p><strong>${t("suggestion")}:</strong> ${f.agent_suggestion || "—"}</p>
+        <h3 style="margin-top:1rem;font-size:0.95rem">${t("reasoning")}</h3>
+        <ul class="reasoning">${steps || "<li>—</li>"}</ul>
+        <h3 style="font-size:0.95rem">${t("excerpt")}</h3>
+        <div class="excerpt">${f.excerpt || "—"}</div>
+        <div class="decision-panel ${isLocked ? "locked-panel" : ""}">
+          <div class="controls">
+            <button type="button" class="decision-agree ${d.human_decision === "agree" ? "selected" : ""}" data-dec="agree" ${isLocked ? "disabled" : ""}>${t("agree")}</button>
+            <button type="button" class="decision-override ${d.human_decision === "override" ? "selected" : ""}" data-dec="override" ${isLocked ? "disabled" : ""}>${t("override")}</button>
+            <button type="button" class="decision-defer ${d.human_decision === "defer" ? "selected" : ""}" data-dec="defer" ${isLocked ? "disabled" : ""}>${t("defer")}</button>
+          </div>
+          <label style="display:block;margin-top:0.75rem;font-size:0.8rem">${t("rationale")}</label>
+          <textarea id="rationaleInput" ${isLocked ? "disabled" : ""}>${d.rationale || ""}</textarea>
+          <div class="controls">
+            ${isLocked
+              ? `<button type="button" id="unlockBtn">${t("unlock")}</button>`
+              : `<button type="button" class="primary" id="lockBtn">${t("lockDecision")}</button>`}
+          </div>
+        </div>`;
+
+      if (!isLocked) {
+        panel.querySelectorAll("[data-dec]").forEach((btn) => {
+          btn.onclick = () => {
+            const dec = btn.dataset.dec;
+            const cur = decisions.get(f.finding_id) || {};
+            cur.human_decision = dec;
+            decisions.set(f.finding_id, cur);
+            saveDecisionsLocal();
+            renderDetail();
+          };
+        });
+        el("lockBtn").onclick = () => lockFinding(f);
+      } else {
+        el("unlockBtn").onclick = () => {
+          if (!confirm(t("unlockConfirm"))) return;
+          const cur = decisions.get(f.finding_id);
+          if (cur) delete cur.locked_at;
+          decisions.set(f.finding_id, cur);
+          saveDecisionsLocal();
+          renderList();
+          renderDetail();
+        };
+      }
+    }
+
+    function saveDecisionsLocal() {
+      localStorage.setItem(storageKey(), JSON.stringify(Object.fromEntries(decisions)));
+    }
+
+    function lockFinding(f) {
+      const rationale = el("rationaleInput").value.trim();
+      const cur = decisions.get(f.finding_id) || {};
+      if (!cur.human_decision) { alert(t("pickDecision")); return; }
+      if (rationale.length < 8) { alert(t("shortRationale")); return; }
+      if (!confirm(t("lockConfirm"))) return;
+      decisions.set(f.finding_id, {
+        finding_id: f.finding_id,
+        fixture_path: f.source_path || f.fixture_path,
+        source_path: f.source_path || f.fixture_path,
+        agent_suggestion: f.agent_suggestion,
+        agent_label: f.label,
+        human_decision: cur.human_decision,
+        rationale,
+        status: "reviewed",
+        locked_at: new Date().toISOString(),
+        moment: f.moment,
+      });
+      saveDecisionsLocal();
+      renderList();
+      renderDetail();
+    }
+
+    function applyLang() {
+      el("pageTitle").textContent = t("title");
+      el("pageSubtitle").textContent = t("subtitle");
+      el("bannerTitle").textContent = t("bannerTitle");
+      el("bannerHint").textContent = t("bannerHint");
+      localStorage.setItem(STORAGE.lang, lang);
+      renderList();
+      if (selectedId) renderDetail();
+    }
+
+    el("langEn").onclick = () => { lang = "en"; applyLang(); };
+    el("langEs").onclick = () => { lang = "es"; applyLang(); };
+    el("labelFilter").onchange = (e) => { labelFilter = e.target.value; renderList(); };
+
+    (async () => {
+      try {
+        await loadFindings();
+        if (findingsDoc.findings.length && !selectedId) selectedId = findingsDoc.findings[0].finding_id;
+        applyLang();
+      } catch (err) {
+        el("errorBanner").textContent = `${t("loadError")} (${err.message})`;
+        el("errorBanner").classList.remove("hidden");
+        el("mainPanel").innerHTML = `<p class="placeholder">${t("loadError")}</p>`;
+      }
+    })();
+  </script>
+</body>
+</html>

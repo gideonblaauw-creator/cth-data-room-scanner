@@ -26,3 +26,11 @@ class TestDryRunPipeline:
         html = Path(result.html_path).read_text()
         assert "DryRun Co" in html
         assert result.drive_folder_url is None  # no upload in dry-run
+        assert result.findings_path is not None
+        findings = Path(result.findings_path)
+        assert findings.exists()
+        import json
+        doc = json.loads(findings.read_text())
+        assert doc["source"] == "dry_run"
+        assert len(doc["findings"]) >= 1
+        assert doc["findings"][0]["finding_id"].startswith("S")
