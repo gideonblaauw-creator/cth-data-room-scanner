@@ -51,6 +51,8 @@
     }
     .banner.info { border-color: var(--accent); }
     .banner.success { border-color: var(--auto_ok); background: rgba(63,185,80,0.08); }
+    .banner.warn { border-color: var(--needs_human); background: rgba(248,81,73,0.08); }
+    .banner.saving { border-color: var(--locked); background: rgba(88,166,255,0.08); }
     .banner.hidden { display: none; }
     .banner-actions { margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .layout {
@@ -151,12 +153,16 @@
       <option value="unclear">unclear</option>
       <option value="auto_ok">auto_ok</option>
     </select>
-    <button type="button" id="topDownload" class="primary" disabled>Download JSON</button>
-    <button type="button" id="topSave" disabled>Save to server</button>
+    <button type="button" id="topDownload" class="primary">Download JSON</button>
+    <span id="exportHint" class="mono" style="font-size:0.75rem;color:var(--muted)"></span>
     <span id="runMeta" class="mono" style="color:var(--muted);margin-left:auto"></span>
   </div>
 
-  <div id="infoBanner" class="banner info">
+  <div id="durabilityBanner" class="banner warn">
+    <strong id="durabilityTitle">Checking save status…</strong>
+    <span id="durabilityHint"></span>
+  </div>
+  <div id="infoBanner" class="banner info hidden">
     <strong id="bannerTitle">Local locks only</strong> —
     <span id="bannerHint">Decisions save to disk on this server. Notion push stays Infra/Hands via <code>scripts/push_microworld_to_notion.py</code> (env token only).</span>
   </div>
@@ -207,6 +213,15 @@
         reasoning: "Reasoning steps", excerpt: "Excerpt",
         loadError: "Could not load findings for this job.",
         filterAll: "All labels",
+        savedToDisk: (path, n) => `Saved to disk: ${path} (${n} locked)`,
+        unsavedWarning: (n) => `Unsaved — ${n} locked decision(s) only in this browser`,
+        saving: "Saving to disk…",
+        saveFailed: "Autosave failed — decisions at risk in this browser only",
+        exportEmpty: "Export empty skeleton (0 locked)",
+        exportCount: (n) => `Export ${n} locked decision(s)`,
+        nothingYet: "Nothing locked yet — export skeleton or lock a finding",
+        mergeConflicts: (n) => `${n} conflict(s) resolved (server won on tie)`,
+        autosaved: "Autosaved",
       },
       es: {
         title: "Revisor de producción CTH",
@@ -234,6 +249,15 @@
         reasoning: "Pasos de razonamiento", excerpt: "Extracto",
         loadError: "No se pudieron cargar hallazgos para este trabajo.",
         filterAll: "Todas las etiquetas",
+        savedToDisk: (path, n) => `Guardado en disco: ${path} (${n} bloqueados)`,
+        unsavedWarning: (n) => `Sin guardar — ${n} decisión(es) solo en este navegador`,
+        saving: "Guardando en disco…",
+        saveFailed: "Autoguardado falló — decisiones en riesgo solo en navegador",
+        exportEmpty: "Exportar esqueleto vacío (0 bloqueados)",
+        exportCount: (n) => `Exportar ${n} decisión(es) bloqueada(s)`,
+        nothingYet: "Nada bloqueado aún — exporte esqueleto o bloquee un hallazgo",
+        mergeConflicts: (n) => `${n} conflicto(s) resueltos (servidor gana en empate)`,
+        autosaved: "Autoguardado",
       },
     };
 
@@ -243,7 +267,10 @@
     let findingsDoc = null;
     let selectedId = null;
     let labelFilter = "all";
-    let decisions = loadDecisions();
+    let decisions = new Map();
+    let persist = { state: "loading", path: null, lastSavedAt: null, pending: false, conflicts: 0 };
+    let autosaveTimer = null;
+    const AUTOSAVE_MS = 400;
 
     const t = (key, ...args) => {
       const v = I18N[lang][key];
@@ -251,16 +278,21 @@
     };
     const el = (id) => document.getElementById(id);
 
-    function loadDecisions() {
+    function loadLocalDecisions() {
       try {
-        const raw = localStorage.getItem(STORAGE.decisions);
-        return raw ? new Map(Object.entries(JSON.parse(raw))) : new Map();
-      } catch { return new Map(); }
+        const raw = localStorage.getItem(storageKey());
+        if (raw) return new Map(Object.entries(JSON.parse(raw)));
+      } catch { /* */ }
+      return new Map();
     }
-    function saveDecisions() {
-      localStorage.setItem(STORAGE.decisions, JSON.stringify(Object.fromEntries(decisions)));
+    function saveDecisionsLocal() {
+      localStorage.setItem(storageKey(), JSON.stringify(Object.fromEntries(decisions)));
     }
     function storageKey() { return `${STORAGE.decisions}-${jobId}`; }
+
+    function localLockedRecords() {
+      return [...decisions.values()].filter((d) => d && d.locked_at);
+    }
 
     function parseJobId() {
       const parts = window.location.pathname.split("/").filter(Boolean);
@@ -277,12 +309,172 @@
       const res = await fetch(url);
       if (!res.ok) throw new Error(await res.text());
       findingsDoc = await res.json();
-      // Restore decisions for this job
-      try {
-        const raw = localStorage.getItem(storageKey());
-        if (raw) decisions = new Map(Object.entries(JSON.parse(raw)));
-      } catch { decisions = new Map(); }
       el("runMeta").textContent = `${findingsDoc.company} · ${findingsDoc.run_id} · ${findingsDoc.source || ""}`;
+      await recoverAndMergeLocks();
+    }
+
+    function locksFromDecisionMap() {
+      return localLockedRecords().map((d) => ({
+        finding_id: d.finding_id,
+        fixture_path: d.fixture_path || d.source_path,
+        agent_suggestion: d.agent_suggestion,
+        agent_label: d.agent_label,
+        human_decision: d.human_decision,
+        rationale: d.rationale,
+        status: d.status || "reviewed",
+        locked_at: d.locked_at,
+        moment: d.moment,
+      }));
+    }
+
+    function applyLocksToDecisions(locks) {
+      for (const lock of locks) {
+        decisions.set(lock.finding_id, {
+          finding_id: lock.finding_id,
+          fixture_path: lock.fixture_path,
+          source_path: lock.fixture_path,
+          agent_suggestion: lock.agent_suggestion,
+          agent_label: lock.agent_label,
+          human_decision: lock.human_decision,
+          rationale: lock.rationale,
+          status: lock.status,
+          locked_at: lock.locked_at,
+          moment: lock.moment,
+        });
+      }
+      saveDecisionsLocal();
+    }
+
+    async function recoverAndMergeLocks() {
+      const local = loadLocalDecisions();
+      decisions = local;
+      const localLocks = [...local.values()].filter((d) => d && d.locked_at);
+
+      const mergeRes = await fetch(`/api/review/${encodeURIComponent(jobId)}/locks/merge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          run_id: findingsDoc.run_id,
+          company: findingsDoc.company,
+          run_link: findingsDoc.findings_path || window.location.href,
+          locks: localLocks.map((d) => ({
+            finding_id: d.finding_id,
+            fixture_path: d.fixture_path || d.source_path,
+            agent_suggestion: d.agent_suggestion,
+            agent_label: d.agent_label,
+            human_decision: d.human_decision,
+            rationale: d.rationale,
+            status: d.status || "reviewed",
+            locked_at: d.locked_at,
+            moment: d.moment,
+          })),
+        }),
+      });
+      if (mergeRes.ok) {
+        const data = await mergeRes.json();
+        applyLocksToDecisions(data.locks || []);
+        persist.path = data.path;
+        persist.conflicts = (data.conflicts || []).length;
+        persist.state = data.lock_count > 0 ? "saved" : (localLocks.length ? "unsaved" : "empty");
+        persist.lastSavedAt = new Date().toISOString();
+      } else {
+        const getRes = await fetch(`/api/review/${encodeURIComponent(jobId)}/locks`);
+        if (getRes.ok) {
+          const data = await getRes.json();
+          persist.path = data.path;
+          if (data.locks && data.locks.length) {
+            applyLocksToDecisions(data.locks);
+            persist.state = "saved";
+          } else {
+            persist.state = localLocks.length ? "unsaved" : "empty";
+          }
+        }
+      }
+      updateDurabilityBanner();
+    }
+
+    function buildLocksDocument() {
+      const locks = locksFromDecisionMap();
+      return {
+        version: 1,
+        run_id: findingsDoc.run_id,
+        company: findingsDoc.company,
+        quiz_passed: true,
+        quiz_source: "production-review",
+        locked_at: new Date().toISOString(),
+        reviewer: null,
+        run_link: findingsDoc.findings_path || window.location.href,
+        job_id: jobId,
+        locks,
+      };
+    }
+
+    function scheduleAutosave() {
+      if (autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(autosaveToServer, AUTOSAVE_MS);
+    }
+
+    async function autosaveToServer() {
+      const doc = buildLocksDocument();
+      persist.state = "saving";
+      persist.pending = true;
+      updateDurabilityBanner();
+      try {
+        const res = await fetch(`/api/review/${encodeURIComponent(jobId)}/locks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(doc),
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          persist.state = doc.locks.length ? "saved" : "empty";
+          persist.path = data.path;
+          persist.lastSavedAt = new Date().toISOString();
+          persist.pending = false;
+        } else {
+          persist.state = "error";
+          persist.pending = false;
+        }
+      } catch {
+        persist.state = "error";
+        persist.pending = false;
+      }
+      updateDurabilityBanner();
+    }
+
+    function updateDurabilityBanner() {
+      const banner = el("durabilityBanner");
+      const locked = lockedCount();
+      banner.className = "banner";
+      if (persist.state === "saving") {
+        banner.classList.add("saving");
+        el("durabilityTitle").textContent = t("saving");
+        el("durabilityHint").textContent = "";
+      } else if (persist.state === "saved" && persist.path) {
+        banner.classList.add("success");
+        el("durabilityTitle").textContent = t("savedToDisk", persist.path, locked);
+        el("durabilityHint").textContent = persist.conflicts ? ` · ${t("mergeConflicts", persist.conflicts)}` : "";
+      } else if (persist.state === "error" || (locked > 0 && persist.state === "unsaved")) {
+        banner.classList.add("warn");
+        el("durabilityTitle").textContent = locked > 0 ? t("unsavedWarning", locked) : t("saveFailed");
+        el("durabilityHint").textContent = locked > 0 ? ` · ${t("autosaved")}? retry on next lock` : "";
+      } else {
+        banner.classList.add("info");
+        el("durabilityTitle").textContent = t("nothingYet");
+        el("durabilityHint").textContent = persist.path ? ` → ${persist.path}` : "";
+      }
+      updateExportHint();
+    }
+
+    function updateExportHint() {
+      const locked = lockedCount();
+      const hint = el("exportHint");
+      hint.textContent = locked ? t("exportCount", locked) : t("exportEmpty");
+      el("topDownload").textContent = locked ? t("downloadLocks") : t("exportEmpty");
+    }
+
+    function updateExportButtons() {
+      updateExportHint();
     }
 
     function filteredFindings() {
@@ -309,57 +501,14 @@
       return total > 0 && lockedCount() === total;
     }
 
-    function buildLocksDocument() {
-      const locks = findingsDoc.findings
-        .map((f) => decisions.get(f.finding_id))
-        .filter((d) => d && d.locked_at)
-        .map((d) => ({
-          finding_id: d.finding_id,
-          fixture_path: d.fixture_path || d.source_path,
-          agent_suggestion: d.agent_suggestion,
-          agent_label: d.agent_label,
-          human_decision: d.human_decision,
-          rationale: d.rationale,
-          status: d.status || "reviewed",
-          locked_at: d.locked_at,
-          moment: d.moment,
-        }));
-      return {
-        version: 1,
-        run_id: findingsDoc.run_id,
-        company: findingsDoc.company,
-        quiz_passed: true,
-        quiz_source: "production-review",
-        locked_at: new Date().toISOString(),
-        reviewer: null,
-        run_link: findingsDoc.findings_path || window.location.href,
-        locks,
-      };
-    }
-
-    function updateExportButtons() {
-      const locked = lockedCount();
-      const hasLocks = locked > 0;
-      el("topDownload").disabled = !hasLocks;
-      el("topSave").disabled = !hasLocks;
-      el("topDownload").textContent = t("downloadLocks");
-      el("topSave").textContent = t("saveServer");
-    }
-
     function updateBanners() {
       updateExportButtons();
+      updateDurabilityBanner();
       const locksBanner = el("locksBanner");
       if (allLocked()) {
         locksBanner.className = "banner success";
-        locksBanner.innerHTML = `
-          <strong>${t("locksReady")}</strong> — ${t("locksReadyHint")}
-          <div class="banner-actions">
-            <button type="button" class="primary" id="bannerDownload">${t("downloadLocks")}</button>
-            <button type="button" id="bannerSave">${t("saveServer")}</button>
-          </div>`;
+        locksBanner.innerHTML = `<strong>${t("locksReady")}</strong> — ${t("locksReadyHint")}`;
         locksBanner.classList.remove("hidden");
-        el("bannerDownload").onclick = downloadLocks;
-        el("bannerSave").onclick = saveLocksToServer;
       } else {
         locksBanner.classList.add("hidden");
       }
@@ -367,27 +516,15 @@
 
     function downloadLocks() {
       const doc = buildLocksDocument();
+      if (!doc.locks.length) {
+        doc.locks = [];
+        doc.note = "Empty skeleton — no locked decisions yet";
+      }
       const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = "review-locks.json";
       a.click();
-    }
-
-    async function saveLocksToServer() {
-      const doc = buildLocksDocument();
-      if (!doc.locks.length) {
-        alert(lang === "en" ? "Lock at least one finding first." : "Bloquee al menos un hallazgo primero.");
-        return;
-      }
-      const res = await fetch(`/api/review/${encodeURIComponent(jobId)}/locks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(doc),
-      });
-      const data = await res.json();
-      if (data.ok) alert(t("savedServer") + `: ${data.path}`);
-      else alert(data.errors?.join("\n") || "Save failed");
     }
 
     function renderList() {
@@ -483,6 +620,7 @@
           if (cur) delete cur.locked_at;
           decisions.set(f.finding_id, cur);
           saveDecisionsLocal();
+          scheduleAutosave();
           renderList();
           renderDetail();
         };
@@ -512,6 +650,7 @@
         moment: f.moment,
       });
       saveDecisionsLocal();
+      scheduleAutosave();
       renderList();
       renderDetail();
     }
@@ -519,8 +658,6 @@
     function applyLang() {
       el("pageTitle").textContent = t("title");
       el("pageSubtitle").textContent = t("subtitle");
-      el("bannerTitle").textContent = t("bannerTitle");
-      el("bannerHint").textContent = t("bannerHint");
       localStorage.setItem(STORAGE.lang, lang);
       renderList();
       if (selectedId) renderDetail();
@@ -530,7 +667,6 @@
     el("langEs").onclick = () => { lang = "es"; applyLang(); };
     el("labelFilter").onchange = (e) => { labelFilter = e.target.value; renderList(); };
     el("topDownload").onclick = downloadLocks;
-    el("topSave").onclick = saveLocksToServer;
 
     (async () => {
       try {

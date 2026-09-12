@@ -75,7 +75,7 @@ This HITL loop implements ideas from [Geoffrey Litt's talk on explorable explana
 
 ## Production reviewer (real scan findings)
 
-After a live or dry-run scan, the pipeline writes **`output/{slug}-{YYYY-MM}.findings.json`** next to the HTML report. Reviewers lock decisions locally — no Notion token in the browser.
+After a live or dry-run scan, the pipeline writes **`output/{slug}-{YYYY-MM}.findings.json`** next to the HTML report. Reviewer decisions **autosave to disk** on every lock — browser localStorage is a cache only, not the source of truth.
 
 ```bash
 docker compose up --build
@@ -90,7 +90,12 @@ open http://127.0.0.1:8080/review/becaps
 |-------|---------|
 | `GET /review/<job_id>` | Production reviewer UI (EN/ES) |
 | `GET /api/review/<job_id>/findings` | Load findings JSON for a job |
-| `POST /api/review/<job_id>/locks` | Save `review-locks.json` beside findings |
+| `POST /api/review/<job_id>/locks` | Autosave locks (debounced after each lock) |
+| `POST /api/review/<job_id>/locks/merge` | Recover: merge server + localStorage on load |
+
+**Server SoT path:** `output/{job_id}-review-locks.json` (e.g. `output/becaps-review-locks.json`).
+
+**Durability:** UI shows green “Saved to disk: path” or red “Unsaved — only in this browser”. Download JSON is always available (empty skeleton when zero locks).
 
 **Finding IDs:** `S001…` from score-derived gaps/docs/eligibility; `F001…` from fixture microworld (`make hitl-demo`).
 
@@ -105,9 +110,17 @@ open http://127.0.0.1:8080/review/becaps
 | Eligibility `warn` | `eligibility_warn` | `unclear` |
 | Strong pillar, no gaps | `pillar_strong` | `auto_ok` |
 
-Locks export as **`review-locks.json`** (microworld locks schema v1 fields; `fixture_path` holds `source_path`). Optional Notion push: `python scripts/push_microworld_to_notion.py --locks output/...-review-locks.json`.
+Locks export as **`review-locks.json`** (microworld locks schema v1 fields; `fixture_path` holds `source_path`).
+
+**Notion (optional team SoT):** after Playground review, push via Infisical env token only:
+`python scripts/push_microworld_to_notion.py --locks output/becaps-review-locks.json`
+The Shared Decisions database remains the multiplayer audit surface once Gideon chooses to promote from Playground.
 
 **Training microworld** (VertiGreen fixtures, quiz gate) stays at `hitl/microworld/index.html` — see `hitl/microworld/README.md`.
+
+### Understanding Lab Playground (direction)
+
+The Playground must become **durable**, not browser-only: scenario → consequences → options → choose should persist the same way as production reviewer locks (server autosave + recovery merge). This PR establishes that pattern for scan findings; the Playground slice will reuse it.
 
 Auth: localhost-only in v1 (same as scan form). Upload may already have run; v1 treats locked decisions as audit trail.
 
@@ -145,7 +158,7 @@ Local working copies (gitignored):
 - `output/{slug}-{YYYY-MM}.html`
 - `output/{slug}-{YYYY-MM}.pdf`
 - `output/{slug}-{YYYY-MM}.findings.json` — reviewable findings (S-prefixed)
-- `output/{slug}-{YYYY-MM}.findings-review-locks.json` — saved reviewer locks (optional)
+- `output/{job_id}-review-locks.json` — autosaved reviewer locks (server SoT)
 
 Shared Drive (team access):
 - `CTH Growth Services / Reports / {YYYY-MM} / {slug} /`
@@ -222,7 +235,7 @@ See `.claude/commands/scan.md` for the in-session flow.
 | `app/main.py` + RQ worker | ✅ HTTP form + queue |
 | `compose.yml` | ✅ Redis + web + worker + Playwright |
 | `scripts/dry_run.py` + `tests/` | ✅ Dry-run + pytest |
-| Production reviewer UI (`/review`) | ✅ Score findings + local locks |
+| Production reviewer UI (`/review`) | ✅ Score findings + server autosave locks |
 | Caddy TLS edge | [PENDIENTE] |
 | CI pipeline | [PENDIENTE] |
 | VPS deploy (Hands) | [PENDIENTE] |

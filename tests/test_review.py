@@ -205,6 +205,137 @@ class TestReviewFlaskRoutes:
         saved = get_res2.get_json()
         assert saved["version"] == 1
         assert len(saved["locks"]) == 1
+        assert saved["path"].endswith("becaps-review-locks.json")
+
+    def test_locks_path_is_job_based(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        client.get("/api/review/becaps/findings")
+        get_res = client.get("/api/review/becaps/locks")
+        assert get_res.status_code == 200
+        assert get_res.get_json()["path"] == str(tmp_path / "becaps-review-locks.json")
+
+    def test_autosave_incremental_locks(self, client, tmp_path, monkeypatch):
+        """Simulate autosave after each lock — second POST replaces with more locks."""
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        findings = client.get("/api/review/becaps/findings").get_json()
+        f0, f1 = findings["findings"][0], findings["findings"][1]
+
+        def post_one(finding):
+            return client.post(
+                "/api/review/becaps/locks",
+                json={
+                    "version": 1,
+                    "run_id": findings["run_id"],
+                    "company": findings["company"],
+                    "quiz_passed": True,
+                    "locked_at": "2026-09-12T14:00:00+00:00",
+                    "locks": [{
+                        "finding_id": finding["finding_id"],
+                        "fixture_path": finding["source_path"],
+                        "agent_suggestion": finding["agent_suggestion"],
+                        "agent_label": finding["label"],
+                        "human_decision": "agree",
+                        "rationale": "Autosaved after lock decision.",
+                        "status": "reviewed",
+                        "locked_at": "2026-09-12T14:00:01+00:00",
+                    }],
+                },
+                content_type="application/json",
+            )
+
+        assert post_one(f0).status_code == 200
+        assert post_one(f1).status_code == 200
+
+        saved = client.get("/api/review/becaps/locks").get_json()
+        assert len(saved["locks"]) == 1  # last POST replaces full doc — UI sends all locks
+
+        both = client.post(
+            "/api/review/becaps/locks",
+            json={
+                "version": 1,
+                "run_id": findings["run_id"],
+                "company": findings["company"],
+                "quiz_passed": True,
+                "locked_at": "2026-09-12T14:00:00+00:00",
+                "locks": [
+                    {
+                        "finding_id": f0["finding_id"],
+                        "fixture_path": f0["source_path"],
+                        "agent_suggestion": f0["agent_suggestion"],
+                        "agent_label": f0["label"],
+                        "human_decision": "agree",
+                        "rationale": "First finding locked and autosaved.",
+                        "status": "reviewed",
+                        "locked_at": "2026-09-12T14:00:01+00:00",
+                    },
+                    {
+                        "finding_id": f1["finding_id"],
+                        "fixture_path": f1["source_path"],
+                        "agent_suggestion": f1["agent_suggestion"],
+                        "agent_label": f1["label"],
+                        "human_decision": "defer",
+                        "rationale": "Second finding deferred pending counsel.",
+                        "status": "reviewed",
+                        "locked_at": "2026-09-12T14:00:02+00:00",
+                    },
+                ],
+            },
+            content_type="application/json",
+        )
+        assert both.status_code == 200
+        saved2 = client.get("/api/review/becaps/locks").get_json()
+        assert len(saved2["locks"]) == 2
+        assert (tmp_path / "becaps-review-locks.json").exists()
+
+    def test_merge_endpoint_prefers_newer_server(self, client, tmp_path, monkeypatch):
+        monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+        findings = client.get("/api/review/becaps/findings").get_json()
+        f0 = findings["findings"][0]
+
+        client.post(
+            "/api/review/becaps/locks",
+            json={
+                "version": 1,
+                "run_id": findings["run_id"],
+                "company": findings["company"],
+                "quiz_passed": True,
+                "locked_at": "2026-09-12T14:00:00+00:00",
+                "locks": [{
+                    "finding_id": f0["finding_id"],
+                    "fixture_path": f0["source_path"],
+                    "agent_suggestion": f0["agent_suggestion"],
+                    "agent_label": f0["label"],
+                    "human_decision": "agree",
+                    "rationale": "Server-side autosaved decision record.",
+                    "status": "reviewed",
+                    "locked_at": "2026-09-12T15:00:00+00:00",
+                }],
+            },
+            content_type="application/json",
+        )
+
+        merge_res = client.post(
+            "/api/review/becaps/locks/merge",
+            json={
+                "run_id": findings["run_id"],
+                "company": findings["company"],
+                "locks": [{
+                    "finding_id": f0["finding_id"],
+                    "fixture_path": f0["source_path"],
+                    "agent_suggestion": f0["agent_suggestion"],
+                    "agent_label": f0["label"],
+                    "human_decision": "override",
+                    "rationale": "Stale local override should lose to server.",
+                    "status": "reviewed",
+                    "locked_at": "2026-09-12T14:00:00+00:00",
+                }],
+            },
+            content_type="application/json",
+        )
+        assert merge_res.status_code == 200
+        data = merge_res.get_json()
+        assert data["locks"][0]["human_decision"] == "agree"
+        assert data["lock_count"] == 1
 
     def test_path_traversal_rejected(self, client, tmp_path, monkeypatch):
         monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))

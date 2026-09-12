@@ -17,6 +17,7 @@ from rq.job import Job
 
 from scanner.config import OUTPUT_DIR, REDIS_URL, REPO_ROOT
 from scanner.findings_from_score import load_findings, normalize_findings_doc
+from scanner.review_persistence import locks_path_for_job, merge_lock_records
 
 logger = logging.getLogger(__name__)
 
@@ -138,8 +139,8 @@ def _resolve_findings_path(job_id: str) -> Path | None:
     return None
 
 
-def _locks_path_for_findings(findings_path: Path) -> Path:
-    return findings_path.with_name(findings_path.stem + "-review-locks.json")
+def _locks_path_for_job(job_id: str) -> Path:
+    return locks_path_for_job(job_id, OUTPUT_DIR)
 
 
 @review_bp.route("/review")
@@ -168,13 +169,21 @@ def api_findings(job_id: str):
 
 @review_bp.route("/api/review/<job_id>/locks", methods=["GET"])
 def api_get_locks(job_id: str):
-    findings_path = _resolve_findings_path(job_id)
-    if not findings_path:
+    if not _resolve_findings_path(job_id):
         abort(404, description="Findings not found")
-    locks_path = _locks_path_for_findings(findings_path)
+    locks_path = _locks_path_for_job(job_id)
     if not locks_path.exists():
-        return jsonify({"locks": [], "path": str(locks_path)})
-    return jsonify(json.loads(locks_path.read_text(encoding="utf-8")))
+        return jsonify({
+            "version": 1,
+            "run_id": job_id,
+            "locks": [],
+            "path": str(locks_path),
+            "job_id": job_id,
+        })
+    data = json.loads(locks_path.read_text(encoding="utf-8"))
+    data.setdefault("path", str(locks_path))
+    data.setdefault("job_id", job_id)
+    return jsonify(data)
 
 
 @review_bp.route("/api/review/<job_id>/locks", methods=["POST"])
@@ -191,17 +200,66 @@ def api_save_locks(job_id: str):
     if errors:
         return jsonify({"ok": False, "errors": errors}), 400
 
-    locks_path = _locks_path_for_findings(findings_path)
+    locks_path = _locks_path_for_job(job_id)
     locks_path.parent.mkdir(parents=True, exist_ok=True)
     payload.setdefault("saved_at", _now_iso())
     payload.setdefault("findings_path", str(findings_path))
     payload.setdefault("job_id", job_id)
+    payload["path"] = str(locks_path)
     locks_path.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    logger.info("review: saved locks → %s", locks_path)
-    return jsonify({"ok": True, "path": str(locks_path)})
+    logger.info("review: autosaved locks → %s (%d records)", locks_path, len(payload.get("locks", [])))
+    return jsonify({"ok": True, "path": str(locks_path), "lock_count": len(payload.get("locks", []))})
+
+
+@review_bp.route("/api/review/<job_id>/locks/merge", methods=["POST"])
+def api_merge_locks(job_id: str):
+    """Merge server locks with client local locks; server wins ties on locked_at."""
+    if not _resolve_findings_path(job_id):
+        abort(404, description="Findings not found")
+
+    body = request.get_json(silent=True) or {}
+    local_locks = body.get("locks") or []
+    if not isinstance(local_locks, list):
+        abort(400, description="locks must be an array")
+
+    locks_path = _locks_path_for_job(job_id)
+    server_locks: list[dict] = []
+    server_doc: dict = {}
+    if locks_path.exists():
+        server_doc = json.loads(locks_path.read_text(encoding="utf-8"))
+        server_locks = server_doc.get("locks") or []
+
+    merged, conflicts = merge_lock_records(server_locks, local_locks, prefer="server")
+    doc = {
+        "version": 1,
+        "run_id": body.get("run_id") or server_doc.get("run_id") or job_id,
+        "company": body.get("company") or server_doc.get("company") or "",
+        "quiz_passed": body.get("quiz_passed", server_doc.get("quiz_passed", True)),
+        "quiz_source": "production-review",
+        "locked_at": _now_iso(),
+        "reviewer": server_doc.get("reviewer"),
+        "run_link": body.get("run_link") or server_doc.get("run_link"),
+        "findings_path": str(_resolve_findings_path(job_id)),
+        "job_id": job_id,
+        "locks": merged,
+        "merge_conflicts": conflicts,
+        "saved_at": _now_iso(),
+        "path": str(locks_path),
+    }
+    if merged:
+        locks_path.parent.mkdir(parents=True, exist_ok=True)
+        locks_path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    return jsonify({
+        "ok": True,
+        "path": str(locks_path),
+        "locks": merged,
+        "conflicts": conflicts,
+        "lock_count": len(merged),
+    })
 
 
 def _validate_locks_payload(payload: dict) -> list[str]:
@@ -209,8 +267,8 @@ def _validate_locks_payload(payload: dict) -> list[str]:
     if payload.get("version") != 1:
         errors.append("version must be 1")
     locks = payload.get("locks")
-    if not isinstance(locks, list) or not locks:
-        errors.append("locks must be a non-empty array")
+    if not isinstance(locks, list):
+        errors.append("locks must be an array")
         return errors
 
     for i, lock in enumerate(locks):

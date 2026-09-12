@@ -11,7 +11,7 @@ This document defines the **Shared space** for Dataroom Reviewer human-in-the-lo
 
 Both export locks compatible with `microworld-locks.schema.json` v1 (`fixture_path` ← `source_path` for production). **Notion push stays env-token only** — `scripts/push_microworld_to_notion.py` on Infra/Hands; never embed tokens in HTML/JS.
 
-Production v1: locks save to disk (`*-review-locks.json`); upload may already have completed — decisions are audit trail until a future HITL gate blocks PDF/upload.
+Production v1: locks autosave to `output/{job_id}-review-locks.json` on every lock; localStorage is recovery cache only. Optional Notion push after Playground choose. Upload may already have completed — decisions are audit trail until a future HITL gate blocks PDF/upload.
 
 ## Purpose
 
