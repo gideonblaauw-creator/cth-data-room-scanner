@@ -14,7 +14,10 @@ DEFAULTS_PATH = (
 )
 PUSH_SCRIPT = ROOT / "scripts" / "push_microworld_to_notion.py"
 EXAMPLE_QUIZ = ROOT / "hitl" / "microworld" / "quiz-answers.example.json"
-INDEX_HTML = ROOT / "hitl" / "microworld" / "index.html"
+LEGACY_INDEX = ROOT / "hitl" / "microworld" / "index.html"
+PLAYGROUND = ROOT / "understanding-lab" / "playground"
+PLAYGROUND_INDEX = PLAYGROUND / "index.html"
+PLAYGROUND_DEFAULTS = PLAYGROUND / "defaults" / "findings-hitl-20260908-214515.json"
 
 
 def _sample_locks() -> dict:
@@ -74,26 +77,50 @@ class TestMicroworldDefaults:
         assert len(quiz["answers"]) == 5
 
 
-class TestMicroworldIndex:
-    def test_index_has_all_tabs(self):
-        html = INDEX_HTML.read_text()
-        for tab in (
-            "Context",
-            "Explainer",
-            "Decision Tree",
-            "Decisions DB",
-            "GH repo",
-            "Clarifications",
-        ):
-            assert tab in html
+class TestPlaygroundLexiScan:
+    def test_playground_files_exist(self):
+        for name in ("index.html", "app.js", "data.js", "styles.css", "README.md", "smoke.sh"):
+            assert (PLAYGROUND / name).exists()
+        assert PLAYGROUND_DEFAULTS.exists()
 
-    def test_index_has_no_notion_token(self):
-        html = INDEX_HTML.read_text().lower()
-        # Env var names in docs are OK; embedded secret values are not.
-        assert "ntn_" not in html
-        assert "secret_" not in html
-        assert 'notion_api_token="' not in html
-        assert "notion_api_token='" not in html
+    def test_playground_uses_house_tour_not_tabs(self):
+        html = PLAYGROUND_INDEX.read_text()
+        app_js = (PLAYGROUND / "app.js").read_text()
+        data_js = (PLAYGROUND / "data.js").read_text()
+        assert "app.js" in html
+        assert "data.js" in html
+        assert "floor-plan" in app_js
+        assert "nameEn" in data_js
+        assert "nameEs" in data_js
+        assert "lexiscan-house-tour-v1" in data_js
+        assert 'data-tab="context"' not in html
+
+    def test_playground_has_no_notion_token(self):
+        combined = "".join(
+            (PLAYGROUND / f).read_text().lower()
+            for f in ("index.html", "app.js", "data.js")
+        )
+        assert "ntn_" not in combined
+        assert "secret_" not in combined
+        assert 'notion_api_token="' not in combined
+        assert "notion_api_token='" not in combined
+
+    def test_legacy_microworld_redirects(self):
+        html = LEGACY_INDEX.read_text()
+        assert "understanding-lab/playground" in html
+
+
+class TestPlaygroundSmoke:
+    def test_smoke_script_passes(self):
+        smoke = PLAYGROUND / "smoke.sh"
+        proc = subprocess.run(
+            ["bash", str(smoke)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "smoke: PASS" in proc.stdout
 
 
 class TestMicroworldLockSchema:

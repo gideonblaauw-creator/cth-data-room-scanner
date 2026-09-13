@@ -275,7 +275,7 @@ def main() -> int:
         f"{summary['needs_human']} needs_human, "
         f"{summary['unclear']} unclear"
     )
-    print(f"\nMicroworld: open hitl/microworld/index.html (see hitl/microworld/README.md)")
+    print(f"\nPlayground: open understanding-lab/playground/ (see understanding-lab/playground/README.md)")
     print(f"Notion spec: hitl/NOTION-HITL.md")
     return 0
 
