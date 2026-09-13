@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scanner Understanding Lab — LexiScan House Tour</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="welcomeOverlay" class="welcome-overlay">
+    <div class="welcome-card">
+      <h2 id="welcomeTitle">Welcome to the Review House</h2>
+      <p id="welcomeBody">Walk the floor plan: context → quiz → decision doors → ledger export. Progress saves locally.</p>
+      <div class="controls">
+        <button type="button" class="primary" id="welcomeStart">Enter the house</button>
+        <button type="button" id="welcomeSkip">Skip intro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusBanner" class="banner"></div>
+
+  <header>
+    <div>
+      <h1 id="titleMain">HITL Review House — VertiGreen</h1>
+      <p id="subtitleMain">Synthetic dataroom · ≤10 min loop · local lock-in</p>
+    </div>
+    <div class="header-actions">
+      <div class="lang-toggle">
+        <button type="button" id="langEn" class="active">EN</button>
+        <button type="button" id="langEs">ES</button>
+      </div>
+      <label class="file-btn">
+        Load findings <input type="file" id="findingsInput" accept=".json" />
+      </label>
+      <button type="button" id="resetBtn">Reset progress</button>
+      <span id="runMeta" class="mono" style="font-size:0.72rem;color:var(--muted)"></span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main id="mainContent"></main>
+    <aside class="ledger-sidebar" id="ledgerPanel"></aside>
+  </div>
+
+  <footer>
+    CleantechHUB Scanner · LexiScan house-tour format · Geoffrey Litt — <em>Explanations / Micro worlds / Shared spaces</em> · See <code>hitl/NOTION-HITL.md</code>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
