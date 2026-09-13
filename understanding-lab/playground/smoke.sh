@@ -24,6 +24,8 @@ check "data.js uses nameEn/nameEs" "grep -q 'nameEn' data.js && grep -q 'nameEs'
 check "data.js lexiscan format tag" "grep -q 'lexiscan-house-tour-v1' data.js"
 check "app.js references floor plan" "grep -q 'floor-plan' app.js"
 check "app.js ledger markdown export" "grep -q 'buildLedgerMarkdown' app.js"
+check "app.js export playground_id" "grep -q 'cth-scanner-ul-playground-v1' app.js"
+check "app.js Decision table in markdown" "grep -q '## Decision table' app.js"
 check "index.html loads split assets" "grep -q 'data.js' index.html && grep -q 'app.js' index.html && grep -q 'styles.css' index.html"
 check "no embedded Notion token values" "! grep -Eiq 'ntn_|secret_.*notion|notion_api_token=' index.html app.js data.js"
 check "defaults findings valid JSON" "python3 -c \"import json; json.load(open('defaults/findings-hitl-20260908-214515.json'))\""

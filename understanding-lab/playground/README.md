@@ -1,6 +1,14 @@
 # Scanner Understanding Lab — LexiScan House Tour
 
-LexiScan-standard **HTML house tour** for the Dataroom Reviewer HITL loop (CleantechHUB Scanner product). Replaces the legacy tabbed shell at `hitl/microworld/`.
+LexiScan-standard **HTML house tour** for the Dataroom Reviewer HITL loop (CleantechHUB Scanner product). Implements Infra format lock **t1268u** — shared LexiScan house-tour layout (floor plan + corridor rooms, not tabs). Replaces the legacy tabbed shell at `hitl/microworld/`.
+
+## Shared decisions (Notion)
+
+Locked decisions export to the CleantechHUB **Shared decisions** database:
+
+**https://app.notion.com/p/bb52cfa45b6744e59983528480fbab4b**
+
+After lock-in, download ledger JSON from the sidebar and push via `scripts/push_microworld_to_notion.py` (token in env only — never in the browser).
 
 ## Serve locally
 
@@ -52,8 +60,10 @@ python scripts/push_microworld_to_notion.py
 
 Uses `cth_scanner_playground_*` keys and **reads legacy** `cth_microworld_*` keys for backward compatibility.
 
-## Canonical format
+## Canonical format (t1268u)
 
-Infra owns LexiScan house-tour format; FabFloow owns LexiScan product. Canonical reference:
+Infra owns LexiScan house-tour format (t1268u); FabFloow owns LexiScan product. Canonical reference:
 
 https://github.com/gideonblaauw-creator/fabfloow-lexiscan/tree/main/understanding-lab/playground
+
+JSON export includes `schema_version`, `playground_id: "cth-scanner-ul-playground-v1"`, and Scanner lock fields. Markdown export includes a `## Decision table` pipe summary before per-lock sections.

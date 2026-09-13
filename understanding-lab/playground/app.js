@@ -167,6 +167,8 @@
       }));
     return {
       version: 1,
+      schema_version: "1",
+      playground_id: "cth-scanner-ul-playground-v1",
       run_id: findingsDoc?.run_id || "unknown",
       company: findingsDoc?.company || "VertiGreen Robotics",
       quiz_passed: quizPassed(),
@@ -179,6 +181,10 @@
     };
   }
 
+  function mdTableCell(value) {
+    return String(value ?? "—").replace(/\|/g, "\\|").replace(/\n/g, " ");
+  }
+
   function buildLedgerMarkdown() {
     const doc = buildLocksDocument();
     const lines = [
@@ -188,11 +194,21 @@
       `- **Company:** ${doc.company}`,
       `- **Quiz passed:** ${doc.quiz_passed}`,
       `- **Exported:** ${doc.locked_at}`,
+      `- **Playground:** ${doc.playground_id}`,
       "",
     ];
     if (doc.locks.length === 0) {
       lines.push("_No locked decisions yet._");
     } else {
+      lines.push("## Decision table", "");
+      lines.push("| finding_id | human_decision | agent_label | rationale |");
+      lines.push("| --- | --- | --- | --- |");
+      doc.locks.forEach((l) => {
+        lines.push(
+          `| ${mdTableCell(l.finding_id)} | ${mdTableCell(l.human_decision)} | ${mdTableCell(l.agent_label)} | ${mdTableCell(l.rationale)} |`
+        );
+      });
+      lines.push("");
       doc.locks.forEach((l) => {
         lines.push(`## ${l.finding_id} — ${l.fixture_path}`);
         lines.push(`- **Decision:** ${l.human_decision}`);
